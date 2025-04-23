@@ -1,0 +1,10 @@
+#Solid phase data: name, logKsp, number_of_components, then stoichiometry
+#Format: Name logKsp N component_1 coeff_1 component_2 coeff_2 ,,,
+#example. needs to be updated case by case
+
+
+UO2(C2O4)2·2H2O  -15.2  2  UO2++ 1  C2O4-- 2
+NaUF5·H2O        -12.3  3  Na+ 1  UO2++ 1  F- 5
+UO2(OH)2(s)      -5.5   2  UO2++ 1  OH- 2
+FePO4·2H2O       -10.1  2  Fe3+ 1  PO4--- 1
+AmF3(s)          -17.5  2  Am3+ 1  F- 3
