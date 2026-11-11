@@ -29,6 +29,15 @@ package RadioThermochemicalArchitecture {
     part def ChemicalEquilibriumModel {
         attribute normalizedResidual : Real;
     }
+    part def NuclearChemicalInventoryBridge {
+        attribute elementInventoryMol : Real;
+    }
+    part def DilutePhasePartitionModel {
+        attribute partitionedSoluteMol : Real;
+    }
+    part def HeadspacePressureModel {
+        attribute pressurePa : Real;
+    }
     part def SimulationController {
         part chemicalSystem : ChemicalSystemModel;
         part inventory : NuclideInventoryModel;
@@ -37,6 +46,9 @@ package RadioThermochemicalArchitecture {
         part radiolysis : RadiolysisSourceModel;
         part thermal : ThermalBalanceModel;
         part equilibrium : ChemicalEquilibriumModel;
+        part inventoryBridge : NuclearChemicalInventoryBridge;
+        part partition : DilutePhasePartitionModel;
+        part headspace : HeadspacePressureModel;
     }
     part simulator : SimulationController;
 }

@@ -164,8 +164,10 @@ modules calculate *gross* radiolytic G-value production and a 0D heat balance.
 
 **This is NOT yet a fully coupled multiphase simulation.** No phase equilibrium
 for multiple liquids or gases, isotope chemical partitioning, radiation transport,
-radiolytic recombination, gas-pressure evolution, or time-integrated chemistry
-has been implemented in the new modules. The existing aqueous solver retains
+radiolytic recombination, or time-integrated chemistry has been implemented.
+A *restricted ideal-gas headspace pressure calculation* and an independent
+neutral-solute linear partition kernel are included, but they are not a coupled
+multiphase chemical equilibrium solver. The existing aqueous solver retains
 its 273.15–323.15 K guard and limited solid model.
 
 See [the SysML v2 architecture](architecture/sysml-v2/RadioThermochemicalArchitecture.sysml),
@@ -179,3 +181,15 @@ safety, regulatory use, or predictive engineering design.
 dimensional example, including ideal-gas headspace pressure. Its gross
 radiolytic yield **does not** automatically become net headspace inventory.
 See `docs/closed-vessel-prototype.md` and `tests/vessel_tests.cpp`.
+
+### Nuclear inventory and linear phase partitioning
+
+`inventory_chemistry_bridge` converts per-nuclide atom inventories to
+chemical-element mole inventories with explicit daughter-element checks.
+`phase_partition` separately solves mass-conserving equilibrium distribution
+of arbitrary neutral dilute solutes among fixed-volume liquids and gases
+using independently supplied concentration ratios. Neither module provides
+radionuclide-specific chemical speciation, nonideal activities, or a fully
+coupled multiphase equilibrium solver.
+
+See `docs/multiphase-linear-partition.md` and corresponding CTest cases.
