@@ -286,3 +286,18 @@ products and enthalpy are not calculated, so the total atom/energy
 balances remain incomplete outside modeled H2 inventory. No real
 radionuclide, G-value or Henry-law database is yet validated.
 See `docs/radiolytic-hydrogen-kinetics.md`.
+
+### Adaptive radiolytic-vessel time integration
+
+`adaptive_vessel_integration` adds bounded step doubling, local-error
+estimation, rejection rollback, configurable tolerances and step budgets,
+accepted-state history and interval nuclear/H2 conservation diagnostics
+to the existing restricted decay, radiolytic-H2, thermal and headspace model.
+It evaluates a full step and two half steps from the same accepted state,
+and commits only the accepted two-half-step trajectory.
+
+**This is not yet a unified equilibrium/kinetics DAE integrator.** The
+general aqueous and multiphase equilibrium kernels are not called by this
+controller, and radiochemical products and heat of reaction remain unmodeled.
+See [time-integration scope](docs/adaptive-time-integration.md) and the
+[SysML v1-style diagram views](architecture/sysml-v2/views/README.md).
