@@ -152,3 +152,23 @@ Only numerical success and mass-action/conservation consistency are established 
 - `speciation.cpp` — earlier ideal-only Phase 2 solver, retained for compatibility
 
 High-priority next steps remain: external PHREEQC comparisons using identical constants, broader solid-phase equilibrium and competing-phase support, diverse chemical test systems, validation reports, thermodynamic parameter provenance and rigorous standard-state conventions.
+
+## Radio-thermochemical multiphase foundation (experimental)
+
+The independent C++17 foundation provides a data model for arbitrary declared
+aqueous, immiscible-organic-liquid, gas and solid species/reactions, with
+structural/stoichiometric validation. First-order radionuclide decay supports
+daughter branching and cumulative event counts; emitted radiation energy
+is differentiated from prescribed phase-absorbed energy. Additional isolated
+modules calculate *gross* radiolytic G-value production and a 0D heat balance.
+
+**This is NOT yet a fully coupled multiphase simulation.** No phase equilibrium
+for multiple liquids or gases, isotope chemical partitioning, radiation transport,
+radiolytic recombination, gas-pressure evolution, or time-integrated chemistry
+has been implemented in the new modules. The existing aqueous solver retains
+its 273.15–323.15 K guard and limited solid model.
+
+See [the SysML v2 architecture](architecture/sysml-v2/RadioThermochemicalArchitecture.sysml),
+[architecture-to-code mapping and requirements](architecture/sysml-v2/README.md),
+and `tests/foundation_tests.cpp`. This software is not verified for nuclear
+safety, regulatory use, or predictive engineering design.

@@ -39,3 +39,16 @@ add_executable(reference_tests tests/reference_tests.cpp)
 target_link_libraries(reference_tests PRIVATE aqueous_engine)
 add_test(NAME analytic_carbonate_reference COMMAND reference_tests)
 set_tests_properties(analytic_carbonate_reference PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+# Independent multiphysics foundation (does not change legacy aqueous solver).
+add_library(thermo_multiphysics_foundation
+    src/multiphase_system.cpp
+    src/decay_network.cpp
+    src/radiolysis_sources.cpp
+    src/lumped_thermal.cpp)
+target_include_directories(thermo_multiphysics_foundation PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_compile_options(thermo_multiphysics_foundation PRIVATE -Wall -Wextra -Wpedantic)
+add_executable(foundation_tests tests/foundation_tests.cpp)
+target_link_libraries(foundation_tests PRIVATE thermo_multiphysics_foundation)
+add_test(NAME radio_thermochemical_foundation COMMAND foundation_tests)
