@@ -25,7 +25,12 @@ template<class F> static void expectsRuntime(F operation,const char* label){
 static DecayNetwork stableNetwork(){
     // Zero radiological generation but a known deposition phase must be
     // represented so gross G(H2) can evaluate to exactly zero.
-    return DecayNetwork({{"StableX","X",0,0,{},{{"water",1.0}}}});
+    return DecayNetwork({
+        {"StableX","X",0,0,{},{}},
+        // Zero inventory: carries an explicit water deposition channel,
+        // ensuring zero-activity radiolysis is still a defined zero source.
+        {"ZeroParent","Y",10,1,{{"StableX",1.0}},{{"water",1.0}}}
+    });
 }
 static RadiolyticHydrogenVesselModel vessel(){
     RadiolyticHydrogenVesselModel m;
