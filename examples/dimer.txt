@@ -1,0 +1,3 @@
+# Synthetic dimerization: 2 A <=> A2, K_form = 10
+component A 0.02 0
+complex A2 0 1.0 1 A 2
