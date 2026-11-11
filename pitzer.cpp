@@ -2,81 +2,65 @@
 #include <cmath>
 #include <fstream>
 #include <sstream>
-#include <iostream>
-// Load Pitzer binary interaction parameters from a file
-std::vector<PitzerPair> loadPitzerParameters() {
-    std::vector<PitzerPair> params;
-    std::ifstream file("pitzer_params.txt");
+#include <stdexcept>
+
+std::vector<PitzerPair> loadPitzerParameters(const std::string& filename) {
+    std::ifstream file(filename);
+    if (!file) throw std::runtime_error("Cannot open Pitzer parameter file: " + filename);
+    std::vector<PitzerPair> result;
     std::string line;
-    if (!file.is_open()) {
-        std::cerr << "Error: Could not open pitzer_params.txt\n";
-        return params;
-    }
-    while (getline(file, line)) {
-        if (line.empty() || line[0] == '#') continue;
-        std::istringstream iss(line);
+    int lineNumber = 0;
+    while (std::getline(file, line)) {
+        ++lineNumber;
+        auto first = line.find_first_not_of(" \t\r");
+        if (first == std::string::npos || line[first] == '#') continue;
+        std::istringstream stream(line);
         PitzerPair p;
-        iss >> p.ion1 >> p.ion2 >> p.beta0 >> p.beta1 >> p.Cphi;
-        params.push_back(p);
+        if (!(stream >> p.ion1 >> p.ion2 >> p.beta0 >> p.beta1 >> p.Cphi))
+            throw std::runtime_error("Invalid parameter row " + std::to_string(lineNumber));
+        if (!std::isfinite(p.beta0) || !std::isfinite(p.beta1) || !std::isfinite(p.Cphi))
+            throw std::runtime_error("Nonfinite parameter at row " + std::to_string(lineNumber));
+        std::string extra;
+        if (stream >> extra && extra[0] != '#')
+            throw std::runtime_error("Extra field on row " + std::to_string(lineNumber));
+        result.push_back(p);
     }
-    return params;
+    return result;
 }
-// Calculate ionic strength I = 0.5 * sum(ci * zi^2)
-double calculateIonicStrength(const Solution& solution, const std::map<std::string, double>& charges) {
-    double I = 0.0;
-    for (const auto& pair : solution.concentrations) {
-        const std::string& ion = pair.first;
-        double conc = pair.second;
-        auto it = charges.find(ion);
-        if (it != charges.end()) {
-            double z = it->second;
-            I += conc * z * z;
-        }
+
+double calculateIonicStrength(const Solution& solution,
+    const std::map<std::string, double>& charges) {
+    double strength = 0.0;
+    for (const auto& [name, concentration] : solution.concentrations) {
+        if (!std::isfinite(concentration) || concentration < 0.0)
+            throw std::invalid_argument("Invalid concentration for " + name);
+        auto charge = charges.find(name);
+        if (charge == charges.end())
+            throw std::invalid_argument("Missing charge for " + name);
+        strength += 0.5 * concentration * charge->second * charge->second;
     }
-    return 0.5 * I;
+    return strength;
 }
-// Calculate the Debye-Hückel term
-double debyeHuckelTerm(double z, double I) {
-    const double A_phi = 0.392;  // at 25 °C
-    const double b = 1.2;
-    return -A_phi * z * z * sqrt(I) / (1 + b * sqrt(I));
-}
-// Apply the Pitzer model to compute activity coefficients
-void calculateActivityCoefficients(std::vector<AqueousSpecies>& species, Solution& solution) {
-    auto pitzerParams = loadPitzerParameters();
-    // Map charges for species
+
+void calculateActivityCoefficients(std::vector<AqueousSpecies>& species,
+    Solution& solution, const std::vector<PitzerPair>& parameters) {
     std::map<std::string, double> charges;
-    for (const auto& sp : species) {
-        charges[sp.name] = sp.charge;
-    }
-    // Calculate ionic strength
+    for (const auto& s : species) charges[s.name] = s.charge;
     solution.ionicStrength = calculateIonicStrength(solution, charges);
-    std::cout << "Ionic strength (Pitzer): " << solution.ionicStrength << "\n";
-    // Precompute ln(gamma) for each species
-    for (auto& sp : species) {
-        double z = sp.charge;
-        double I = solution.ionicStrength;
-        // Debye-Hückel term
-        double ln_gamma = debyeHuckelTerm(z, I);
-        // Pitzer binary terms
-        for (const auto& param : pitzerParams) {
-            bool isMatch = false;
-            std::string otherIon;
-            double beta0 = param.beta0;
-            double beta1 = param.beta1;
-            double Cphi = param.Cphi;
-            if (param.ion1 == sp.name) {
-                otherIon = param.ion2;
-                isMatch = true;
-            } else if (param.ion2 == sp.name) {
-                otherIon = param.ion1;
-                isMatch = true;
-            }
-            if (isMatch && solution.concentrations.count(otherIon)) {
-                double m_j = solution.concentrations.at(otherIon);
-                ln_gamma += m_j * (beta0 + beta1 * exp(-2.0 * sqrt(I)) + z * charges[otherIon] * Cphi * I);
-            }
+    const double rootI = std::sqrt(solution.ionicStrength);
+    for (auto& s : species) {
+        // Illustrative approximation, deliberately not labeled a complete Pitzer formulation.
+        double lnGamma = -0.392 * s.charge * s.charge * rootI / (1.0 + 1.2 * rootI);
+        for (const auto& p : parameters) {
+            const std::string* other = nullptr;
+            if (p.ion1 == s.name) other = &p.ion2;
+            else if (p.ion2 == s.name) other = &p.ion1;
+            if (!other) continue;
+            auto it = solution.concentrations.find(*other);
+            if (it == solution.concentrations.end()) continue;
+            lnGamma += it->second * (p.beta0 + p.beta1 * std::exp(-2.0 * rootI)
+                + s.charge * charges.at(*other) * p.Cphi * solution.ionicStrength);
         }
-        sp.activityCoefficient = exp(ln_gamma);
+        s.activityCoefficient = std::exp(lnGamma);
     }
 }
