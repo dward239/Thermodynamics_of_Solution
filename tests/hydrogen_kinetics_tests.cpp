@@ -52,6 +52,19 @@ static void testReverseTransferAndPartitionRatio(){
     ensure(result.netTransferToHeadspaceMol<0,
            "Gas should dissolve into liquid if oversaturated");
 }
+static void testRapidTransferStability(){
+    HydrogenKineticsParameters p;
+    p.transferRatePerSecond=1e10;
+    p.equilibriumDissolvedToGasMoleRatio=1.0;
+    p.substeps=32;
+    auto result=advanceHydrogenKinetics({0.8,0.2,0},1.0,0,p);
+    near(result.state.dissolvedMol,0.5,1e-7,
+         "Stiff liquid gas balance");
+    near(result.state.headspaceMol,0.5,1e-7,
+         "Stiff liquid gas redistribution");
+    near(result.state.dissolvedMol+result.state.headspaceMol,1,1e-10,
+         "Stiff transfer conservation");
+}
 static void testConsumptionConservation(){
     HydrogenKineticsParameters p;
     p.dissolvedConsumptionRatePerSecond=0.25;
@@ -165,6 +178,7 @@ int main(){
     testNoTransferAndGrossProduction();
     testIrreversibleTransfer();
     testReverseTransferAndPartitionRatio();
+    testRapidTransferStability();
     testConsumptionConservation();
     testMixedProductionAndLoss();
     testVesselCoupling();

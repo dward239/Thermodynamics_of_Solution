@@ -49,7 +49,12 @@ HydrogenKineticsStep advanceHydrogenKinetics(
     const double c=-step*p.transferRatePerSecond;
     const double d=1.0+step*p.transferRatePerSecond*
                     p.equilibriumDissolvedToGasMoleRatio;
-    const double det=a*d-b*c;
+    // Expand determinant analytically to avoid cancellation when transfer
+    // rates are much faster than the time step.
+    const double hkc=step*p.dissolvedConsumptionRatePerSecond;
+    const double hkt=step*p.transferRatePerSecond;
+    const double r=p.equilibriumDissolvedToGasMoleRatio;
+    const double det=1.0+hkc+hkt+hkt*r+hkc*hkt*r;
     if(!std::isfinite(a)||!std::isfinite(b)||!std::isfinite(c)||
        !std::isfinite(d)||!std::isfinite(det)||det<=0.0)
         throw std::invalid_argument("Hydrogen kinetics time step/rates overflow");
@@ -67,6 +72,9 @@ HydrogenKineticsStep advanceHydrogenKinetics(
         out.state.headspaceMol=gas;
         out.state.cumulativeConsumedMol+=consumed;
         out.consumedDuringStepMol+=consumed;
+        if(!std::isfinite(out.state.cumulativeConsumedMol)||
+           !std::isfinite(out.consumedDuringStepMol))
+            throw std::overflow_error("Hydrogen consumption integral overflow");
     }
     out.netTransferToHeadspaceMol=
         out.state.headspaceMol-initial.headspaceMol;
