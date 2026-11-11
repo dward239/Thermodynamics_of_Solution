@@ -140,3 +140,16 @@ target_compile_options(adaptive_vessel_integration PRIVATE -Wall -Wextra -Wpedan
 add_executable(adaptive_vessel_tests tests/adaptive_vessel_tests.cpp)
 target_link_libraries(adaptive_vessel_tests PRIVATE adaptive_vessel_integration)
 add_test(NAME adaptive_radiolytic_vessel_time_integration COMMAND adaptive_vessel_tests)
+
+# One-way chemistry projection at every accepted adaptive vessel sample.
+add_library(time_dependent_chemistry src/time_dependent_chemistry.cpp)
+target_include_directories(time_dependent_chemistry PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(time_dependent_chemistry PUBLIC
+    adaptive_vessel_integration inventory_chemistry_bridge
+    ideal_multiphase_equilibrium)
+target_compile_options(time_dependent_chemistry PRIVATE -Wall -Wextra -Wpedantic)
+add_executable(time_dependent_chemistry_tests tests/time_dependent_chemistry_tests.cpp)
+target_link_libraries(time_dependent_chemistry_tests PRIVATE time_dependent_chemistry)
+add_test(NAME isotope_to_time_dependent_equilibrium
+    COMMAND time_dependent_chemistry_tests)
