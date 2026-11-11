@@ -19,7 +19,7 @@ static void shouldThrow(const IdealMultiphaseModel& m,const char* msg){
 static void testTwoLiquidPhases(){
     IdealMultiphaseModel m;
     m.components={{"X",0.01}};
-    m.phases={{"water",0.001,1000.0},{"organic",0.002,1000.0}};
+    m.phases={{"water",0.001,1000.0},{"organic",0.002,1000.0,IdealFluidPhaseKind::OrganicLiquid}};
     m.species={{"X(aq)","water",{{"X",1}},0.0},
                {"X(org)","organic",{{"X",1}},-std::log(2.0)}};
     auto r=solveIdealMultiphase(m);
@@ -52,7 +52,7 @@ static void testFormationEquilibrium(){
 static void testThreePhaseDistribution(){
     IdealMultiphaseModel m;
     m.components={{"GaslikeNeutral",2}};
-    m.phases={{"aqueous",1,1},{"organic",1,1},{"headspace",1,1}};
+    m.phases={{"aqueous",1,1},{"organic",1,1,IdealFluidPhaseKind::OrganicLiquid},{"headspace",1,1,IdealFluidPhaseKind::Gas}};
     m.species={{"S(aq)","aqueous",{{"GaslikeNeutral",1}},0},
                {"S(org)","organic",{{"GaslikeNeutral",1}},-std::log(2.0)},
                {"S(gas)","headspace",{{"GaslikeNeutral",1}},-std::log(3.0)}};

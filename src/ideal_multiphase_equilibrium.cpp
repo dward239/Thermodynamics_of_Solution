@@ -48,6 +48,10 @@ Prepared validate(const IdealMultiphaseModel& model) {
     }
     std::map<std::string,IdealPhase> phases;
     for(const auto& phase:model.phases) {
+        if(phase.kind!=IdealFluidPhaseKind::AqueousLiquid &&
+           phase.kind!=IdealFluidPhaseKind::OrganicLiquid &&
+           phase.kind!=IdealFluidPhaseKind::Gas)
+            throw std::invalid_argument("Unknown ideal fluid phase type");
         if(phase.id.empty()||!phases.emplace(phase.id,phase).second||
            !std::isfinite(phase.volumeM3)||phase.volumeM3<=0||
            !std::isfinite(phase.standardConcentrationMolM3)||
@@ -59,6 +63,9 @@ Prepared validate(const IdealMultiphaseModel& model) {
     if(!model.electroneutralPhaseId.empty() &&
        !phases.count(model.electroneutralPhaseId))
         throw std::invalid_argument("Unknown charge-balanced phase");
+    if(!model.electroneutralPhaseId.empty() &&
+       phases.at(model.electroneutralPhaseId).kind!=IdealFluidPhaseKind::AqueousLiquid)
+        throw std::invalid_argument("Charge-balanced phase must be aqueous liquid");
     if(p.freeIndex!=-1 && model.components.size()<2)
         throw std::invalid_argument("A charge-balanced model needs a fixed component");
     std::set<std::string> speciesIds;

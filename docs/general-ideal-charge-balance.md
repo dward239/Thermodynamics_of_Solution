@@ -3,7 +3,8 @@
 ## Supported problem
 
 Optional `electroneutralPhaseId` designates ONE electroneutral fluid
-phase. Charged species must belong to this phase. All other phases may
+phase. The designated phase must have `IdealFluidPhaseKind::AqueousLiquid`.
+Charged species must belong to this phase. All other phases may
 hold neutral species. Exactly one `IdealComponent` must be marked
 `fixedTotal=false`, with `totalMol=0`: its total is **inferred** from
 charge neutrality, rather than incorrectly imposing an extra independent
@@ -48,3 +49,8 @@ and residuals for fixed components only.
 
 Use this extension as a data-model and solver verification checkpoint
 before adding rigorous chemical activity models and multiple charged phases.
+
+Fluid phases are explicitly identified as aqueous liquid, organic liquid,
+or gas. This does not implement a gas equation of state or rigorous
+liquid thermodynamics; these labels constrain which approximations can be
+selected and prevent nonsensical charged-gas inputs.

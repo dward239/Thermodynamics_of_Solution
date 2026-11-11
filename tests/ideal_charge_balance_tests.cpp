@@ -54,8 +54,8 @@ static void testIonicAssociation(){
 static void testNeutralOtherPhases(){
     auto m=electrolyte();
     m.components.push_back({"X",0.004,true});
-    m.phases.push_back({"organic",0.001,1000.0});
-    m.phases.push_back({"headspace",0.001,1000.0});
+    m.phases.push_back({"organic",0.001,1000.0,IdealFluidPhaseKind::OrganicLiquid});
+    m.phases.push_back({"headspace",0.001,1000.0,IdealFluidPhaseKind::Gas});
     m.species.push_back({"X(aq)","water",{{"X",1}},0,0});
     m.species.push_back({"X(org)","organic",{{"X",1}},-std::log(2.0),0});
     m.species.push_back({"X(g)","headspace",{{"X",1}},-std::log(1.0),0});
@@ -95,6 +95,10 @@ static void testInvalidChargeModels(){
     invalid.species[1].phaseId="organic";
     expectInvalid([&]{(void)solveIdealMultiphase(invalid);},
                   "Charged interphase transfer unsupported");
+    invalid=m;
+    invalid.phases[0].kind=IdealFluidPhaseKind::Gas;
+    expectInvalid([&]{(void)solveIdealMultiphase(invalid);},
+                  "Gas phase cannot serve as aqueous charge-balanced phase");
     invalid=m;
     invalid.electroneutralPhaseId="missing";
     expectInvalid([&]{(void)solveIdealMultiphase(invalid);},

@@ -13,10 +13,12 @@ struct IdealComponent {
     double totalMol=0.0;
     bool fixedTotal=true; // false: infer total from electroneutrality, not mass balance
 };
+enum class IdealFluidPhaseKind { AqueousLiquid, OrganicLiquid, Gas };
 struct IdealPhase {
     std::string id;
     double volumeM3=0.0;
     double standardConcentrationMolM3=1000.0;
+    IdealFluidPhaseKind kind=IdealFluidPhaseKind::AqueousLiquid;
 };
 struct IdealSpecies {
     std::string id;
