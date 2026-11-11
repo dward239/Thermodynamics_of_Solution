@@ -5,7 +5,8 @@
 namespace thermo {
 // Restricted general mass-action equilibrium: neutral IDEAL-DILUTE species.
 // Species may inhabit distinct fixed-volume liquids or a gas headspace.
-// No solids, charges, liquid-liquid activity coupling, or phase creation.
+// Base solve excludes solids; optional bounded pure-solid extension below.
+// No charges, liquid-liquid activity coupling, or phase creation.
 struct IdealComponent {
     std::string id;
     double totalMol=0.0;

@@ -15,7 +15,7 @@ in CI. Architectural agreement is a design objective, not a verified claim.
 | RadiationDepositionModel | `NuclideDefinition::depositionFractions` | User-prescribed absorption; no shielding solver |
 | RadiolysisSourceModel | `src/radiolysis_sources.cpp` | Gross G-value production, not net gas |
 | ThermalBalanceModel | `src/lumped_thermal.cpp` | Lumped constant-capacity energy balance |
-| ChemicalEquilibriumModel | `include/aqueous_engine.h`, `include/ideal_multiphase_equilibrium.h` | Original aqueous solver plus an independent generalized neutral ideal-dilute fluid solver |
+| ChemicalEquilibriumModel | `include/aqueous_engine.h`, `include/ideal_multiphase_equilibrium.h` | Original aqueous solver; independent generalized neutral ideal-dilute fluids and bounded multiple-pure-solid extension |
 | SimulationController | `src/vessel_simulation.cpp` and `src/vessel_cli.cpp` | Restricted decay/heat/pressure step and data-driven synthetic CLI |
 | Nuclide-to-chemical-component bridge | `src/inventory_chemistry_bridge.cpp` | Per-isotope atoms to elemental moles, no phase allocation |
 | Neutral linear phase partition | `src/phase_partition.cpp` | Arbitrary fixed-volume liquid/gas phases; neutral dilute species only |
@@ -40,6 +40,7 @@ in CI. Architectural agreement is a design objective, not a verified claim.
 | RT-013 | Accept user-defined nuclide networks and time grids without recompiling code. | `examples/synthetic_vessel.txt`, `synthetic_vessel_cli` CTest |
 | RT-014 | Map newly generated daughter elements to neutral multi-liquid partition inventories and reject missing parameters. | `tests/decay_phase_partition_tests.cpp` |
 | RT-015 | Solve simultaneous ideal-dilute fluid mass action and component conservation with arbitrary neutral species across liquids and gases. | `tests/ideal_multiphase_tests.cpp` |
+| RT-016 | Select up to eight initially absent pure solids by equilibrium saturation and complementarity. | `tests/ideal_multisolid_tests.cpp` |
 
 ## Critical separation-of-concerns decisions
 
@@ -74,3 +75,11 @@ dimensionless standard chemical potentials and fixed-volume phases.
 It does not supersede the original ionic aqueous solver or provide
 general nonideal multiphase equilibrium. See
 `docs/general-ideal-fluid-equilibrium.md` for equations and assumptions.
+
+### Candidate pure-solid phase stability
+
+The optional ideal-fluid extension enumerates active subsets of at most eight
+pure solids, requiring positive inventories, component conservation and
+nonpositive affinity for absent solids. It is an experimental first step and
+is not a production solid-activity model. See
+`docs/ideal-multisolid-equilibrium.md`.

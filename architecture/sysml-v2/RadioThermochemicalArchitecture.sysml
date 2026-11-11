@@ -46,6 +46,10 @@ package RadioThermochemicalArchitecture {
     part def NeutralDecayPartitionBridge {
         attribute daughterElementMoles : Real;
     }
+    part def PureSolidPhaseSelector {
+        attribute candidateSolidCount : Integer;
+        attribute activeSolidCount : Integer;
+    }
     part def SimulationController {
         part chemicalSystem : ChemicalSystemModel;
         part inventory : NuclideInventoryModel;
@@ -55,6 +59,7 @@ package RadioThermochemicalArchitecture {
         part thermal : ThermalBalanceModel;
         part equilibrium : ChemicalEquilibriumModel;
         part idealFluid : GeneralIdealFluidEquilibriumModel;
+        part solidSelection : PureSolidPhaseSelector;
         part inventoryBridge : NuclearChemicalInventoryBridge;
         part partition : DilutePhasePartitionModel;
         part headspace : HeadspacePressureModel;
