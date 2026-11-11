@@ -15,7 +15,7 @@ in CI. Architectural agreement is a design objective, not a verified claim.
 | RadiationDepositionModel | `NuclideDefinition::depositionFractions` | User-prescribed absorption; no shielding solver |
 | RadiolysisSourceModel | `src/radiolysis_sources.cpp` | Gross G-value production, not net gas |
 | ThermalBalanceModel | `src/lumped_thermal.cpp` | Lumped constant-capacity energy balance |
-| ChemicalEquilibriumModel | `include/aqueous_engine.h`, `include/ideal_multiphase_equilibrium.h` | Original aqueous solver; independent generalized neutral ideal-dilute fluids and bounded multiple-pure-solid extension |
+| ChemicalEquilibriumModel | `include/aqueous_engine.h`, `include/ideal_multiphase_equilibrium.h` | Original aqueous solver; independent ideal-dilute fluid solver with restricted single-phase charge balance and bounded neutral multiple-pure-solid extension |
 | SimulationController | `src/vessel_simulation.cpp` and `src/vessel_cli.cpp` | Restricted decay/heat/pressure step and data-driven synthetic CLI |
 | Nuclide-to-chemical-component bridge | `src/inventory_chemistry_bridge.cpp` | Per-isotope atoms to elemental moles, no phase allocation |
 | Neutral linear phase partition | `src/phase_partition.cpp` | Arbitrary fixed-volume liquid/gas phases; neutral dilute species only |
@@ -41,6 +41,7 @@ in CI. Architectural agreement is a design objective, not a verified claim.
 | RT-014 | Map newly generated daughter elements to neutral multi-liquid partition inventories and reject missing parameters. | `tests/decay_phase_partition_tests.cpp` |
 | RT-015 | Solve simultaneous ideal-dilute fluid mass action and component conservation with arbitrary neutral species across liquids and gases. | `tests/ideal_multiphase_tests.cpp` |
 | RT-016 | Select up to eight initially absent pure solids by equilibrium saturation and complementarity. | `tests/ideal_multisolid_tests.cpp` |
+| RT-017 | Support a designated electroneutral fluid phase by inferring one free counterion component total. | `tests/ideal_charge_balance_tests.cpp` |
 
 ## Critical separation-of-concerns decisions
 
@@ -83,3 +84,11 @@ pure solids, requiring positive inventories, component conservation and
 nonpositive affinity for absent solids. It is an experimental first step and
 is not a production solid-activity model. See
 `docs/ideal-multisolid-equilibrium.md`.
+
+### Restricted charged-species conservation
+
+`ideal_multiphase_equilibrium` now supports exactly one designated charged
+fluid phase whose electroneutrality replaces one component mass balance;
+its free component total is inferred. This does not implement multi-phase
+electrochemical potentials, nonideal electrolytes or charged-solid selection.
+See `docs/general-ideal-charge-balance.md`.

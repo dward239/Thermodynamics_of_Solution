@@ -50,6 +50,11 @@ package RadioThermochemicalArchitecture {
         attribute candidateSolidCount : Integer;
         attribute activeSolidCount : Integer;
     }
+    part def SinglePhaseChargeBalance {
+        attribute chargedPhaseCount : Integer;
+        attribute freeCounterionTotalMol : Real;
+        attribute chargeResidualMol : Real;
+    }
     part def SimulationController {
         part chemicalSystem : ChemicalSystemModel;
         part inventory : NuclideInventoryModel;
@@ -60,6 +65,7 @@ package RadioThermochemicalArchitecture {
         part equilibrium : ChemicalEquilibriumModel;
         part idealFluid : GeneralIdealFluidEquilibriumModel;
         part solidSelection : PureSolidPhaseSelector;
+        part chargeBalance : SinglePhaseChargeBalance;
         part inventoryBridge : NuclearChemicalInventoryBridge;
         part partition : DilutePhasePartitionModel;
         part headspace : HeadspacePressureModel;

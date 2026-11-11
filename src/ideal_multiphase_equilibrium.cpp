@@ -14,10 +14,16 @@ struct Prepared {
     std::vector<double> lnScale;          // ln(V * concentration standard) - mu0/RT
     std::vector<double> totals;
     std::vector<double> volumes;
+    std::vector<double> charge;
+    std::vector<bool> fixed;
+    double chargeScale=1e-12;
+    int freeIndex=-1;
 };
 struct Calculation {
     std::vector<double> moles;
     std::vector<double> residual;
+    std::vector<double> componentMoles;
+    double chargeResidualMol=0.0;
     double norm=std::numeric_limits<double>::infinity();
 };
 Prepared validate(const IdealMultiphaseModel& model) {
@@ -28,20 +34,43 @@ Prepared validate(const IdealMultiphaseModel& model) {
     for(std::size_t i=0;i<model.components.size();++i) {
         const auto& c=model.components[i];
         if(c.id.empty()||!componentIds.emplace(c.id,i).second||
-           !std::isfinite(c.totalMol)||c.totalMol<=0)
-            throw std::invalid_argument("Invalid component name/positive total");
+           !std::isfinite(c.totalMol)||
+           (c.fixedTotal && c.totalMol<=0.0) ||
+           (!c.fixedTotal && c.totalMol!=0.0))
+            throw std::invalid_argument("Invalid fixed total or free component: "+c.id);
+        if(!c.fixedTotal) {
+            if(p.freeIndex!=-1)
+                throw std::invalid_argument("Exactly one free component is supported");
+            p.freeIndex=static_cast<int>(i);
+        } else p.chargeScale+=c.totalMol;
         p.totals.push_back(c.totalMol);
+        p.fixed.push_back(c.fixedTotal);
     }
     std::map<std::string,IdealPhase> phases;
     for(const auto& phase:model.phases) {
+        if(phase.kind!=IdealFluidPhaseKind::AqueousLiquid &&
+           phase.kind!=IdealFluidPhaseKind::OrganicLiquid &&
+           phase.kind!=IdealFluidPhaseKind::Gas)
+            throw std::invalid_argument("Unknown ideal fluid phase type");
         if(phase.id.empty()||!phases.emplace(phase.id,phase).second||
            !std::isfinite(phase.volumeM3)||phase.volumeM3<=0||
            !std::isfinite(phase.standardConcentrationMolM3)||
            phase.standardConcentrationMolM3<=0)
             throw std::invalid_argument("Invalid phase, volume or concentration reference");
     }
+    if((p.freeIndex!=-1)!=(!model.electroneutralPhaseId.empty()))
+        throw std::invalid_argument("Electroneutrality requires exactly one free component");
+    if(!model.electroneutralPhaseId.empty() &&
+       !phases.count(model.electroneutralPhaseId))
+        throw std::invalid_argument("Unknown charge-balanced phase");
+    if(!model.electroneutralPhaseId.empty() &&
+       phases.at(model.electroneutralPhaseId).kind!=IdealFluidPhaseKind::AqueousLiquid)
+        throw std::invalid_argument("Charge-balanced phase must be aqueous liquid");
+    if(p.freeIndex!=-1 && model.components.size()<2)
+        throw std::invalid_argument("A charge-balanced model needs a fixed component");
     std::set<std::string> speciesIds;
     std::vector<bool> covered(model.components.size(),false);
+    bool hasChargedSpecies=false;
     for(const auto& s:model.species) {
         if(s.id.empty()||!speciesIds.insert(s.id).second||
            !phases.count(s.phaseId)||!std::isfinite(s.standardMuOverRT)||
@@ -55,7 +84,14 @@ Prepared validate(const IdealMultiphaseModel& model) {
             n[it->second]=count;
             covered[it->second]=true;
         }
+        if(s.charge!=0) {
+            hasChargedSpecies=true;
+            if(s.phaseId!=model.electroneutralPhaseId)
+                throw std::invalid_argument(
+                    "Charged species outside designated charge-balanced phase: "+s.id);
+        }
         const auto& phase=phases.at(s.phaseId);
+        p.charge.push_back(static_cast<double>(s.charge));
         p.nu.push_back(std::move(n));
         p.volumes.push_back(phase.volumeM3);
         p.lnScale.push_back(std::log(phase.volumeM3)+
@@ -64,12 +100,15 @@ Prepared validate(const IdealMultiphaseModel& model) {
     }
     for(bool found:covered)
         if(!found)throw std::invalid_argument("A component has no representing species");
+    if(p.freeIndex!=-1 && !hasChargedSpecies)
+        throw std::invalid_argument("Charge balance requires charged species");
     return p;
 }
 bool evaluate(const Prepared& p,const std::vector<double>& x,Calculation& result) {
     const std::size_t n=p.totals.size();
     result.moles.assign(p.nu.size(),0.0);
     std::vector<double> calculated(n,0.0);
+    result.chargeResidualMol=0.0;
     for(std::size_t s=0;s<p.nu.size();++s) {
         double ln=p.lnScale[s];
         for(std::size_t i=0;i<n;++i)ln+=p.nu[s][i]*x[i];
@@ -77,12 +116,16 @@ bool evaluate(const Prepared& p,const std::vector<double>& x,Calculation& result
         const double amount=ln < -740.0 ? 0.0:std::exp(ln);
         if(!std::isfinite(amount))return false;
         result.moles[s]=amount;
+        result.chargeResidualMol+=p.charge[s]*amount;
         for(std::size_t i=0;i<n;++i)calculated[i]+=p.nu[s][i]*amount;
     }
     result.norm=0.0;
     result.residual.assign(n,0.0);
+    result.componentMoles=calculated;
     for(std::size_t i=0;i<n;++i) {
-        result.residual[i]=(calculated[i]-p.totals[i])/p.totals[i];
+        result.residual[i]=p.fixed[i]
+            ?(calculated[i]-p.totals[i])/p.totals[i]
+            :result.chargeResidualMol/p.chargeScale;
         if(!std::isfinite(result.residual[i]))return false;
         result.norm=std::max(result.norm,std::abs(result.residual[i]));
     }
@@ -131,12 +174,14 @@ IdealEquilibriumResult solveIdealMultiphase(const IdealMultiphaseModel& model,
             for(std::size_t j=0;j<n;++j)
                 if(j!=i&&p.nu[s][j]!=0)monomer=false;
             if(monomer) {
-                x[i]=std::log(p.totals[i])-p.lnScale[s];
+                // No prescribed total exists for a free counterion.
+                const double guess=p.fixed[i]?p.totals[i]:p.chargeScale;
+                x[i]=std::log(guess)-p.lnScale[s];
                 found=true;
                 break;
             }
         }
-        if(!found)x[i]=std::log(p.totals[i]);
+        if(!found)x[i]=std::log(p.fixed[i]?p.totals[i]:p.chargeScale);
     }
     Calculation current;
     if(!evaluate(p,x,current))throw std::runtime_error("Invalid initial ideal multiphase state");
@@ -145,8 +190,11 @@ IdealEquilibriumResult solveIdealMultiphase(const IdealMultiphaseModel& model,
         std::vector<std::vector<double>> jac(n,std::vector<double>(n,0.0));
         for(std::size_t s=0;s<p.nu.size();++s)
             for(std::size_t i=0;i<n;++i)
-                for(std::size_t j=0;j<n;++j)
-                    jac[i][j]+=(p.nu[s][i]*p.nu[s][j]*current.moles[s])/p.totals[i];
+                for(std::size_t j=0;j<n;++j) {
+                    const double ai=p.fixed[i]?p.nu[s][i]:p.charge[s];
+                    const double scale=p.fixed[i]?p.totals[i]:p.chargeScale;
+                    jac[i][j]+=ai*p.nu[s][j]*current.moles[s]/scale;
+                }
         std::vector<double> rhs=current.residual;
         for(double& v:rhs)v=-v;
         std::vector<double> delta;
@@ -173,6 +221,7 @@ IdealEquilibriumResult solveIdealMultiphase(const IdealMultiphaseModel& model,
     IdealEquilibriumResult result;
     result.iterations=iterations;
     result.maxNormalizedResidual=current.norm;
+    result.chargeResidualMol=current.chargeResidualMol;
     for(std::size_t i=0;i<n;++i)
         result.componentPotentialOverRT[model.components[i].id]=x[i];
     for(std::size_t s=0;s<p.nu.size();++s) {
@@ -180,10 +229,10 @@ IdealEquilibriumResult solveIdealMultiphase(const IdealMultiphaseModel& model,
         result.concentrationsMolM3[model.species[s].id]=current.moles[s]/p.volumes[s];
     }
     for(std::size_t i=0;i<n;++i) {
-        double calculated=0.0;
-        for(std::size_t s=0;s<p.nu.size();++s)
-            calculated+=p.nu[s][i]*current.moles[s];
-        result.componentResidualMol[model.components[i].id]=calculated-p.totals[i];
+        const auto& name=model.components[i].id;
+        result.calculatedComponentMol[name]=current.componentMoles[i];
+        if(p.fixed[i])
+            result.componentResidualMol[name]=current.componentMoles[i]-p.totals[i];
     }
     return result;
 }
@@ -195,6 +244,9 @@ IdealSolidEquilibriumResult solveIdealMultiphaseWithSolids(
     if(maxIterations<1 || maxIterations>100000 ||
        !std::isfinite(tolerance) || tolerance<=0 || tolerance>=0.01)
         throw std::invalid_argument("Invalid solid equilibrium solver options");
+    if(!fluidModel.electroneutralPhaseId.empty())
+        throw std::invalid_argument(
+            "Charge balance with solid phase enumeration is not yet supported");
     if(candidates.size()>8)
         throw std::invalid_argument("Solid candidate enumeration limited to eight phases");
     const auto prepared=validate(fluidModel);
