@@ -204,7 +204,15 @@ from `examples/synthetic_vessel.txt`. Run with:
 
 The example is intentionally synthetic. Pressure is computed from fixed headspace
 moles and temperature; gross radiolytic H2 formation is NOT net gas generation.
-See `docs/vessel-input-format.md` for units and restrictions.
+Open [the vessel input editor](tools/vessel_editor/index.html) from a local
+checkout in your browser. Use **Load example**, **Import .txt**, or **New case**
+to configure a model. The editor checks references and units-aware inputs,
+previews the generated text, and downloads a file for the command above.
+It works offline without a server or build step.
+
+See [the vessel input format](docs/vessel-input-format.md) for units and
+restrictions and [the editor guide](tools/vessel_editor/README.md) for
+maintenance details.
 
 ### Restricted decay-to-neutral-phase partition
 
