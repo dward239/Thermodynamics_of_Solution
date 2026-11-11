@@ -172,3 +172,10 @@ See [the SysML v2 architecture](architecture/sysml-v2/RadioThermochemicalArchite
 [architecture-to-code mapping and requirements](architecture/sysml-v2/README.md),
 and `tests/foundation_tests.cpp`. This software is not verified for nuclear
 safety, regulatory use, or predictive engineering design.
+
+### Restricted closed-vessel demonstration
+
+`vessel_simulation` links the separate physics modules for a simple zero-
+dimensional example, including ideal-gas headspace pressure. Its gross
+radiolytic yield **does not** automatically become net headspace inventory.
+See `docs/closed-vessel-prototype.md` and `tests/vessel_tests.cpp`.

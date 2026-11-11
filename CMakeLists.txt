@@ -52,3 +52,11 @@ target_compile_options(thermo_multiphysics_foundation PRIVATE -Wall -Wextra -Wpe
 add_executable(foundation_tests tests/foundation_tests.cpp)
 target_link_libraries(foundation_tests PRIVATE thermo_multiphysics_foundation)
 add_test(NAME radio_thermochemical_foundation COMMAND foundation_tests)
+
+add_library(vessel_simulation src/vessel_simulation.cpp)
+target_include_directories(vessel_simulation PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(vessel_simulation PUBLIC thermo_multiphysics_foundation)
+target_compile_options(vessel_simulation PRIVATE -Wall -Wextra -Wpedantic)
+add_executable(vessel_tests tests/vessel_tests.cpp)
+target_link_libraries(vessel_tests PRIVATE vessel_simulation)
+add_test(NAME closed_vessel_prototype COMMAND vessel_tests)
