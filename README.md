@@ -214,3 +214,17 @@ partitioning among aqueous/organic/gas phases. Each element is provisionally
 treated as a single neutral pseudo-solute: **this is not radionuclide
 speciation, redox chemistry, or full multiphase equilibrium**. See
 `docs/decay-phase-partition.md` and automated conservation tests.
+
+### Generalized ideal-dilute neutral-fluid equilibrium prototype
+
+The separate `ideal_multiphase_equilibrium` C++ library solves simultaneous
+conservation and mass-action relations for arbitrary user-defined neutral
+components and neutral chemical species in any finite number of **fixed-volume**
+fluid phases. A Newton solver with analytic Jacobian treats standard chemical
+potentials and phase concentration reference states explicitly. Tests include
+neutral association, immiscible-fluid partition and gas-phase allocation.
+
+This is **not** yet a general radioactive multiphase chemical-equilibrium
+engine. Charged electrolytes, nonideal activity/fugacity, solids, dynamic phase
+stability, coupled thermal response and chemical kinetics are not integrated.
+See `docs/general-ideal-fluid-equilibrium.md`.
