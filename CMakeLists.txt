@@ -118,3 +118,16 @@ target_compile_options(davies_multiphase_equilibrium PRIVATE -Wall -Wextra -Wped
 add_executable(davies_multiphase_tests tests/davies_multiphase_tests.cpp)
 target_link_libraries(davies_multiphase_tests PRIVATE davies_multiphase_equilibrium)
 add_test(NAME restricted_davies_multiphase_coupling COMMAND davies_multiphase_tests)
+
+# One-species radiolytic H2 gas/liquid reservoir kinetics (experimental).
+add_library(hydrogen_kinetics src/hydrogen_kinetics.cpp)
+target_include_directories(hydrogen_kinetics PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_compile_options(hydrogen_kinetics PRIVATE -Wall -Wextra -Wpedantic)
+add_library(radiolytic_hydrogen_vessel src/radiolytic_hydrogen_vessel.cpp)
+target_include_directories(radiolytic_hydrogen_vessel PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(radiolytic_hydrogen_vessel PUBLIC
+    hydrogen_kinetics vessel_simulation)
+target_compile_options(radiolytic_hydrogen_vessel PRIVATE -Wall -Wextra -Wpedantic)
+add_executable(hydrogen_kinetics_tests tests/hydrogen_kinetics_tests.cpp)
+target_link_libraries(hydrogen_kinetics_tests PRIVATE radiolytic_hydrogen_vessel)
+add_test(NAME radiolytic_hydrogen_kinetics COMMAND hydrogen_kinetics_tests)

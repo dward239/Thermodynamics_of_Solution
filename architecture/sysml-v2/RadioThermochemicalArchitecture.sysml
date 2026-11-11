@@ -59,6 +59,11 @@ package RadioThermochemicalArchitecture {
         attribute ionicStrengthMolL : Real;
         attribute outerConsistencyResidual : Real;
     }
+    part def RadiolyticHydrogenKinetics {
+        attribute dissolvedHydrogenMol : Real;
+        attribute headspaceHydrogenMol : Real;
+        attribute consumedHydrogenMol : Real;
+    }
     part def SimulationController {
         part chemicalSystem : ChemicalSystemModel;
         part inventory : NuclideInventoryModel;
@@ -71,6 +76,7 @@ package RadioThermochemicalArchitecture {
         part solidSelection : PureSolidPhaseSelector;
         part chargeBalance : SinglePhaseChargeBalance;
         part daviesCoupling : DaviesActivityCoupling;
+        part hydrogenKinetics : RadiolyticHydrogenKinetics;
         part inventoryBridge : NuclearChemicalInventoryBridge;
         part partition : DilutePhasePartitionModel;
         part headspace : HeadspacePressureModel;

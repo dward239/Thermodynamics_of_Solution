@@ -13,10 +13,10 @@ in CI. Architectural agreement is a design objective, not a verified claim.
 | NuclideInventoryModel | `include/decay_network.h` | Inventory per nuclide, not chemically partitioned |
 | NuclearDecayModel | `src/decay_network.cpp` | First-order branching; fission unsupported |
 | RadiationDepositionModel | `NuclideDefinition::depositionFractions` | User-prescribed absorption; no shielding solver |
-| RadiolysisSourceModel | `src/radiolysis_sources.cpp` | Gross G-value production, not net gas |
+| RadiolysisSourceModel | `src/radiolysis_sources.cpp` and `src/hydrogen_kinetics.cpp` | Gross G-value and restricted net H2 accumulation model |
 | ThermalBalanceModel | `src/lumped_thermal.cpp` | Lumped constant-capacity energy balance |
 | ChemicalEquilibriumModel | `include/aqueous_engine.h`, `include/ideal_multiphase_equilibrium.h` | Original aqueous solver; independent ideal-dilute fluid solver with restricted single-phase charge balance and bounded neutral multiple-pure-solid extension |
-| SimulationController | `src/vessel_simulation.cpp` and `src/vessel_cli.cpp` | Restricted decay/heat/pressure step and data-driven synthetic CLI |
+| SimulationController | `src/vessel_simulation.cpp`, `src/vessel_cli.cpp`, `src/radiolytic_hydrogen_vessel.cpp` | Restricted decay/heat/pressure and H2 kinetic coupling; no full chemistry |
 | Nuclide-to-chemical-component bridge | `src/inventory_chemistry_bridge.cpp` | Per-isotope atoms to elemental moles, no phase allocation |
 | Neutral linear phase partition | `src/phase_partition.cpp` | Arbitrary fixed-volume liquid/gas phases; neutral dilute species only |
 | Restricted decay-to-neutral partition bridge | `src/decay_phase_partition.cpp` | Element totals from daughter nuclei; each element treated as one neutral pseudo-solute |
@@ -43,6 +43,7 @@ in CI. Architectural agreement is a design objective, not a verified claim.
 | RT-016 | Select up to eight initially absent pure solids by equilibrium saturation and complementarity. | `tests/ideal_multisolid_tests.cpp` |
 | RT-017 | Support a designated electroneutral fluid phase by inferring one free counterion component total. | `tests/ideal_charge_balance_tests.cpp` |
 | RT-018 | Compute a bounded, self-consistent approximate Davies ionic strength and charged-species activities in the generalized fluid model. | `tests/davies_multiphase_tests.cpp` |
+| RT-019 | Track radiolytic H2 gross generation, dissolved/headspace transfer and first-order modeled loss while conserving H2 molecular inventory plus loss. | `tests/hydrogen_kinetics_tests.cpp` |
 
 ## Critical separation-of-concerns decisions
 
@@ -101,3 +102,11 @@ strength and charged-aqueous-species activity corrections with the original
 molarity-based Davies function. It rejects unsupported temperature and high
 ionic strength; molality-correct Pitzer and multi-liquid electrochemical
 potentials remain unimplemented. See `docs/davies-multiphase-equilibrium.md`.
+
+### Hydrogen kinetic coupling limit
+
+The new `radiolytic_hydrogen_vessel` tracks two H2 reservoirs and updates
+pressure using net headspace transfer. The consumption sink feeds an
+**unmodeled product pool** and no explicit atom or chemical enthalpy balance;
+the model is not closed thermochemical reactor simulation. See
+`docs/radiolytic-hydrogen-kinetics.md`.

@@ -270,3 +270,19 @@ This is **not** molality-correct Pitzer thermodynamics, an interfacial
 electrochemical model, charged-solid equilibrium or a validated nuclide model.
 Ionic strength is restricted to 0.1 mol/L and temperature to 0–50 C.
 See `docs/davies-multiphase-equilibrium.md`.
+
+### Bounded radiolytic hydrogen production and vessel pressurization
+
+`hydrogen_kinetics` and `radiolytic_hydrogen_vessel` separately track
+gross H2 generation, dissolved H2, interphase transfer into a rigid
+headspace, and pseudo-first-order H2 consumption. Mass accounting
+distinguishes formation from transfer and explicitly tracked loss.
+Only net gas transfer modifies vessel pressure. The calculation uses
+user-specified kinetic and partition coefficients and the existing
+decay-energy deposition and thermal prototypes.
+
+**Not a complete radiolytic chemistry mechanism.** The sink reaction's
+products and enthalpy are not calculated, so the total atom/energy
+balances remain incomplete outside modeled H2 inventory. No real
+radionuclide, G-value or Henry-law database is yet validated.
+See `docs/radiolytic-hydrogen-kinetics.md`.
