@@ -2,10 +2,12 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 using namespace thermo;
 namespace {
 constexpr double NA=6.02214076e23;
+constexpr double heatingDecayEnergyJ=1e-20;
 void near(double a,double b,double tol,const char* what){
     if(!std::isfinite(a)||std::abs(a-b)>tol*std::max(1.0,std::abs(b)))
         throw std::runtime_error(what);
@@ -15,8 +17,8 @@ template<class F> void invalid(F f,const char* reason){
     bool yes=false;try{f();}catch(const std::invalid_argument&){yes=true;}
     require(yes,reason);
 }
-DecayNetwork network(){return DecayNetwork({
-    {"X-parent","X",10,1e-23,{{"Y-daughter",1}},{{"water",0.5}}},
+DecayNetwork network(double decayEnergyJ=1e-23){return DecayNetwork({
+    {"X-parent","X",10,decayEnergyJ,{{"Y-daughter",1}},{{"water",0.5}}},
     {"Y-daughter","Y",0,0,{},{}}});}
 RadiolyticHydrogenVesselModel vessel(){
     RadiolyticHydrogenVesselModel m;
@@ -56,6 +58,19 @@ TimeDependentChemistryModel chem(){
     };
     m.backgroundComponentMol={{"B",.25}};
     return m;
+}
+ChemicalProjectionThermodynamics thermodynamicsFor(const TimeDependentChemistryModel& model) {
+    ChemicalProjectionThermodynamics data;
+    for(const auto& species:model.equilibriumTemplate.species)
+        data.standardEnthalpyJPerMolById[species.id]=0.0;
+    for(const auto& solid:model.candidateSolids)
+        data.standardEnthalpyJPerMolById[solid.id]=0.0;
+    return data;
+}
+RadiolyticHydrogenVesselModel heatedVessel() {
+    auto model=vessel();
+    model.vessel.thermal.heatCapacityJPerKgK=25.0;
+    return model;
 }
 void phaseAndDaughter(){
     auto s=initial();auto n=network();auto v=vessel();auto c=chem();auto o=options();
@@ -113,6 +128,96 @@ void dynamicSolidAppearance(){
          "Reported component closure includes solids");
     require(last.maximumScaledComponentClosure<=1,
             "Conservation across precipitated solids");
+}
+void temperatureDependentFluidPartition() {
+    constexpr double R=8.31446261815324;
+    constexpr double transferEnthalpy=18000.0;
+    auto model=chem();
+    model.equilibriumTemplate.phases.push_back({"gas",1,1,IdealFluidPhaseKind::Gas});
+    model.equilibriumTemplate.species.push_back({"B(g)","gas",{{"B",1}},0});
+    auto fixedStandardStates=integrateVesselWithChemicalProjection(
+        initial(),10,network(heatingDecayEnergyJ),heatedVessel(),model,options());
+    model.thermodynamics=thermodynamicsFor(model);
+    model.thermodynamics->standardEnthalpyJPerMolById.at("X(org)")=transferEnthalpy;
+    auto heated=integrateVesselWithChemicalProjection(
+        initial(),10,network(heatingDecayEnergyJ),heatedVessel(),model,options());
+    require(heated.samples.size()==fixedStandardStates.samples.size(),
+            "Temperature-dependent chemistry preserves the vessel grid");
+    require(heated.samples.back().vessel.state.vessel.temperatureK>310.0,
+            "Decay heats the vessel sufficiently to test redistribution");
+    const double reference=model.thermodynamics->referenceTemperatureK;
+    for(std::size_t i=0;i<heated.samples.size();++i) {
+        const auto& sample=heated.samples[i];
+        const auto& legacy=fixedStandardStates.samples[i];
+        const double temperature=sample.vessel.state.vessel.temperatureK;
+        const auto& moles=sample.fluid.speciesMoles;
+        near(sample.vessel.state.vessel.timeSeconds,legacy.vessel.state.vessel.timeSeconds,
+             1e-12,"Chemistry preserves accepted time");
+        near(moles.at("X(org)")/moles.at("X(aq)"),
+             2.0*std::exp(transferEnthalpy/R*(1.0/reference-1.0/temperature)),
+             1e-9,"Liquid transfer ratio follows van't Hoff");
+        near(moles.at("B(g)")/moles.at("B(aq)"),reference/temperature,
+             1e-9,"Ideal gas uses fixed reference pressure");
+        require(sample.maximumScaledComponentClosure<=1,"Heated fluid component closure");
+    }
+    near(fixedStandardStates.samples.back().fluid.speciesMoles.at("B(g)"),.125,1e-9,
+         "Legacy mode retains fixed gas standard concentration");
+}
+void temperatureDependentPrecipitation() {
+    constexpr double R=8.31446261815324;
+    constexpr double dissolutionEnthalpy=30000.0;
+    auto model=chem();
+    model.equilibriumTemplate.species.erase(model.equilibriumTemplate.species.begin()+1);
+    model.candidateSolids={{"XY(s)",{{"X",1},{"Y",1}},std::log(.01)}};
+    model.thermodynamics=thermodynamicsFor(model);
+    model.thermodynamics->standardEnthalpyJPerMolById.at("XY(s)")=-dissolutionEnthalpy;
+    auto trajectory=integrateVesselWithChemicalProjection(
+        initial(),10,network(heatingDecayEnergyJ),heatedVessel(),model,options());
+    near(trajectory.samples.front().solidMoles.at("XY(s)"),0,1e-12,
+         "Temperature model does not seed daughter solids");
+    const auto& last=trajectory.samples.back();
+    const double temperature=last.vessel.state.vessel.temperatureK;
+    const double reference=model.thermodynamics->referenceTemperatureK;
+    const double saturationMol=.1*std::exp(dissolutionEnthalpy/(2.0*R)*
+                                          (1.0/reference-1.0/temperature));
+    near(last.fluid.speciesMoles.at("X(aq)"),saturationMol,1e-8,
+         "Saturation amount follows temperature-dependent solubility product");
+    near(last.solidMoles.at("XY(s)"),.5-saturationMol,1e-8,
+         "Temperature-dependent precipitate conserves the daughter and parent");
+    require(last.maximumScaledComponentClosure<=1,"Heated solid component closure");
+}
+void thermodynamicsValidation() {
+    auto model=chem();
+    model.thermodynamics=thermodynamicsFor(model);
+    auto run=[&](double endTime) {
+        return integrateVesselWithChemicalProjection(
+            initial(),endTime,network(heatingDecayEnergyJ),heatedVessel(),model,options());
+    };
+    auto& data=*model.thermodynamics;
+    auto& enthalpies=data.standardEnthalpyJPerMolById;
+    enthalpies.erase("Y(aq)");
+    invalid([&]{(void)run(.01);},"Missing enthalpy is rejected even for absent daughter");
+    enthalpies["Y(aq)"]=std::numeric_limits<double>::infinity();
+    invalid([&]{(void)run(.01);},"Nonfinite enthalpy is rejected");
+    enthalpies["Y(aq)"]=0.0;
+    enthalpies["unknown"]=0.0;
+    invalid([&]{(void)run(.01);},"Unknown enthalpy entry is rejected");
+    enthalpies.erase("unknown");
+    data.maximumTemperatureK=290.0;
+    invalid([&]{(void)run(.01);},"Reference temperature must lie within the bounds");
+    data.maximumTemperatureK=323.15;
+    data.minimumTemperatureK=data.referenceTemperatureK;
+    near(run(.01).samples.front().vessel.state.vessel.temperatureK,data.minimumTemperatureK,
+         1e-12,"An endpoint of the temperature range is inclusive");
+    data.minimumTemperatureK=273.15;
+    data.maximumTemperatureK=data.referenceTemperatureK;
+    bool failed=false;
+    try {
+        (void)run(10);
+    } catch(const std::domain_error&) {
+        failed=true;
+    }
+    require(failed,"A heated candidate outside the data range aborts before commit");
 }
 void allZero(){
     auto s=initial();s.vessel.nuclideAtoms["X-parent"]=0;
@@ -180,5 +285,7 @@ void invalidModels(){
 int main(){
     phaseAndDaughter();dynamicSolidAppearance();allZero();
     abortWhenNewDaughterHasNoSpecies();invalidModels();
+    temperatureDependentFluidPartition();temperatureDependentPrecipitation();
+    thermodynamicsValidation();
     std::cout<<"Time-dependent isotope-to-neutral-equilibrium projection passed\n";
 }

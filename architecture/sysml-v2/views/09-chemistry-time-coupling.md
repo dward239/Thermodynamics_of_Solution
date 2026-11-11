@@ -15,6 +15,7 @@ flowchart LR
     E["equilibrium: IdealNeutralMultiphaseKernel"]
     A["audit: ComponentConservation"]
     C -->|"accepted candidate nuclide atoms"| N
+    C -->|"candidate vessel temperature"| E
     N -->|"element mol + background mol"| E
     E -->|"species mol / solid mol"| A
     A -->|"pass/fail, component residual"| C
@@ -35,7 +36,9 @@ flowchart TD
   C -->|No| D["Commit vessel candidate"]
   C -->|Yes| E["Nuclides → elements + background"]
   E --> F["Exclude zero-inventory species and solids"]
-  F --> G["Solve ideal fluid / pure-solid equilibrium"]
+  F --> T["Evaluate configured standard states"]
+  T -->|valid| G["Solve ideal fluid / pure-solid equilibrium"]
+  T -->|out of range / invalid| J
   G --> H["Audit fluid and solid component totals"]
   H --> I{"Projection succeeds?"}
   I -->|Yes| D
@@ -51,10 +54,12 @@ Rejected vessel **numerical** trial steps never enter this flow.
 stateDiagram-v2
   [*] --> AwaitCandidate
   AwaitCandidate --> MapInventory: accepted candidate
-  MapInventory --> SolveEquilibrium: all components mapped
+  MapInventory --> EvaluateStandardStates: all components mapped
+  EvaluateStandardStates --> SolveEquilibrium: standard states ready
   SolveEquilibrium --> AuditComponents: converged
   AuditComponents --> ReadyToCommit: scaled closure <= 1
   MapInventory --> Failed: unsupported / missing component
+  EvaluateStandardStates --> Failed: out of range / invalid
   SolveEquilibrium --> Failed: invalid / nonconverged equilibrium
   AuditComponents --> Failed: conservation failure
   ReadyToCommit --> [*]
@@ -75,15 +80,15 @@ sequenceDiagram
   Callback->>Bridge: elementalMolesFromNuclides(atoms)
   Bridge-->>Callback: element mole totals
   Callback->>Callback: add background and suppress zero species
-  Callback->>Eq: solveIdealMultiphase / WithSolids
-  Eq-->>Callback: fluid species and pure-solid inventories
-  Callback->>Audit: reconstruct conserved component totals
-  alt valid equilibrium and closure
-    Audit-->>Callback: pass
+  Callback->>Callback: evaluate standard states at candidate temperature
+  alt valid standard states, equilibrium, and closure
+    Callback->>Eq: solveIdealMultiphase / WithSolids
+    Eq-->>Callback: fluid species and pure-solid inventories
+    Callback->>Audit: reconstruct conserved component totals
+    Audit-->>Callback: closure passed
     Callback-->>Adaptive: projection accepted
     Adaptive->>Adaptive: commit candidate and history
-  else invalid chemistry / conservation
-    Audit-->>Callback: throw
+  else invalid temperature, chemistry, or conservation
     Callback-->>Adaptive: exception
     Adaptive->>Adaptive: abort without returning partial trajectory
   end
