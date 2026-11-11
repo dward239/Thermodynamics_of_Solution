@@ -167,12 +167,14 @@ IdealEquilibriumResult solveIdealMultiphase(const IdealMultiphaseModel& model,
             for(std::size_t j=0;j<n;++j)
                 if(j!=i&&p.nu[s][j]!=0)monomer=false;
             if(monomer) {
-                x[i]=std::log(p.totals[i])-p.lnScale[s];
+                // No prescribed total exists for a free counterion.
+                const double guess=p.fixed[i]?p.totals[i]:p.chargeScale;
+                x[i]=std::log(guess)-p.lnScale[s];
                 found=true;
                 break;
             }
         }
-        if(!found)x[i]=std::log(p.totals[i]);
+        if(!found)x[i]=std::log(p.fixed[i]?p.totals[i]:p.chargeScale);
     }
     Calculation current;
     if(!evaluate(p,x,current))throw std::runtime_error("Invalid initial ideal multiphase state");
