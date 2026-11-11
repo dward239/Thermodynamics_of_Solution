@@ -68,3 +68,10 @@ target_compile_options(inventory_chemistry_bridge PRIVATE -Wall -Wextra -Wpedant
 add_executable(inventory_bridge_tests tests/inventory_bridge_tests.cpp)
 target_link_libraries(inventory_bridge_tests PRIVATE inventory_chemistry_bridge)
 add_test(NAME radionuclide_element_inventory_bridge COMMAND inventory_bridge_tests)
+
+add_library(phase_partition src/phase_partition.cpp)
+target_include_directories(phase_partition PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_compile_options(phase_partition PRIVATE -Wall -Wextra -Wpedantic)
+add_executable(phase_partition_tests tests/phase_partition_tests.cpp)
+target_link_libraries(phase_partition_tests PRIVATE phase_partition)
+add_test(NAME multi_liquid_linear_partition COMMAND phase_partition_tests)
