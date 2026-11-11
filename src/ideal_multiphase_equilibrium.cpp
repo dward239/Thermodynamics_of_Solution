@@ -16,7 +16,7 @@ struct Prepared {
     std::vector<double> volumes;
     std::vector<double> charge;
     std::vector<bool> fixed;
-    double chargeScale=1.0;
+    double chargeScale=1e-12;
     int freeIndex=-1;
 };
 struct Calculation {

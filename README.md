@@ -241,3 +241,18 @@ and two solids simultaneously sharing a conserved component. This is **not**
 yet a fully general solid Gibbs minimizer; it does not implement solid
 solutions, seed inventories, charged electrolyte thermodynamics or phase
 kinetics. See `docs/ideal-multisolid-equilibrium.md`.
+
+### Restricted ideal electrolyte charge balance
+
+The generalized ideal-fluid solver also accepts charged species confined
+to one explicitly designated electroneutral phase. **One** chemical
+component is marked free (not separately conserved): its total is inferred
+by replacing that component's mass-balance equation with an electroneutrality
+equation. This keeps the nonlinear system square without introducing a
+redundant electrochemical potential variable. Charge residuals and inferred
+component totals are returned.
+
+The extension is ideal-dilute only; it does **not** supply nonideal activity
+coefficients, electrochemical potentials across distinct liquid phases,
+redox chemistry, charged-species transport, or charged-solid equilibria.
+See `docs/general-ideal-charge-balance.md` for assumptions and tests.
