@@ -13,6 +13,7 @@ using the familiar SysML v1 diagram taxonomy, for easier engineering review.
 | SD | [Solver call sequence](05-sequence.md) | Software interaction ordering |
 | REQ | [Requirements and verification](06-requirements.md) | requirement def, verification intent |
 | PAR | [Mass/energy constraints](07-parametric.md) | Constraints, invariant equations |
+| Allocation | [Functional allocation](08-allocation.md) | allocation def / allocate |
 
 **Textual SysML v2 sources:** [structural model](../RadioThermochemicalArchitecture.sysml),
 [connected interfaces](../TimeIntegrationConnections.sysml),
