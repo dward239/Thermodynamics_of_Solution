@@ -33,3 +33,11 @@ stateDiagram-v2
 The state diagram is a behavioral **design view**. The C++ implementation
 currently realizes these conditions through its control flow, not a runtime
 state-machine engine.
+
+## Optional chemistry projection state
+
+With an accepted-state observer configured, the audit-success path enters
+a chemical **projection** state before commit. Failed projection ends the
+run without accepting the candidate. In the base vessel-only controller,
+the observer is absent and the path remains audit → commit. See the
+[chemical projection STM](09-chemistry-time-coupling.md).

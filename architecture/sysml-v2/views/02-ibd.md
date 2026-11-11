@@ -40,3 +40,12 @@ flowchart LR
 These are **numerical software interfaces**, not fluid ports, pipes, or mass
 transfer geometries. Connector payloads in the SysML source are intentionally
 coarse **conceptual item types**, not complete generated C++ bindings.
+
+## Optional accepted-state chemical projection
+
+The base vessel connections above remain unchanged. When the experimental
+`time_dependent_chemistry` wrapper is used, an additional **one-way**
+accepted-candidate interface connects nuclear inventory to elemental
+totals, ideal multiphase equilibrium and independent conservation audit
+before adaptive commit. No reverse chemistry-to-thermal/radiolysis edges
+are implemented. See [the projection IBD](09-chemistry-time-coupling.md).

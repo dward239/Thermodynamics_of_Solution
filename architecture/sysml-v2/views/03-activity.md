@@ -31,3 +31,12 @@ flowchart TD
 The accepted state is immutable during a trial. Errors from invalid
 physical configuration fail immediately. Only local truncation error and
 explicitly retryable numerical issues trigger step reduction.
+
+## Acceptance-time chemical extension
+
+An optional accepted-state observer is invoked after a trial passes its
+vessel-level local-error and conservation checks, **before** committing
+that candidate. It converts isotope inventories to chemical elements,
+solves the supported neutral equilibrium, and audits fluid+solid mass.
+Observer errors terminate the integration; rejected time trials are never
+projected. See [extended ACT](09-chemistry-time-coupling.md).

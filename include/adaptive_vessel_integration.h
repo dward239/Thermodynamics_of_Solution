@@ -1,6 +1,7 @@
 #pragma once
 #include "radiolytic_hydrogen_vessel.h"
 #include <cstddef>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -58,11 +59,16 @@ struct AdaptiveVesselTrajectory {
 // A rejected trial never updates the accepted state. On failure, throws
 // rather than returning an apparently completed partial trajectory.
 // Backward-Euler H2 substeps remain the actual kinetic discretization.
+// Optional acceptedObserver is called on the initial and each accepted sample
+// BEFORE committing that sample; it is never called for rejected trials.
+// Observer exceptions abort integration rather than silently accepting an
+// unprojectable chemistry state.
 AdaptiveVesselTrajectory integrateRadiolyticHydrogenVessel(
     const RadiolyticHydrogenVesselState& initial,
     double endTimeSeconds,
     const DecayNetwork& network,
     const RadiolyticHydrogenVesselModel& model,
-    const AdaptiveVesselOptions& options = {});
+    const AdaptiveVesselOptions& options = {},
+    const std::function<void(const AdaptiveVesselSample&)>& acceptedObserver = {});
 
 } // namespace thermo
