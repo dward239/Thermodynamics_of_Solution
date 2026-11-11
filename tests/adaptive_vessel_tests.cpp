@@ -170,6 +170,33 @@ static void testGuardsAndFailureDoesNotMutate(){
     expectsRuntime([&]{(void)integrateRadiolyticHydrogenVessel(
         initial,3.0,stableNetwork(),model,o);},"Honor accepted-step budget");
 }
+static void testAcceptedObserverAndFailure() {
+    auto s=state();auto m=vessel();auto o=options();
+    std::vector<double> observed;
+    auto t=integrateRadiolyticHydrogenVessel(
+        s,3.0,stableNetwork(),m,o,
+        [&](const AdaptiveVesselSample& sample) {
+            observed.push_back(sample.state.vessel.timeSeconds);
+        });
+    ensure(t.rejectedSteps>0,"Observer test requires rejected trial");
+    ensure(observed.size()==t.history.size(),
+           "Observer must be called for initial and accepted states only");
+    for(std::size_t i=0;i<observed.size();++i)
+        near(observed[i],t.history[i].state.vessel.timeSeconds,1e-12,
+             "Observer matches accepted state timestamps");
+    int calls=0;
+    expectsRuntime([&]{
+        (void)integrateRadiolyticHydrogenVessel(
+            s,3.0,stableNetwork(),m,o,
+            [&](const AdaptiveVesselSample& sample) {
+                ++calls;
+                if(sample.state.vessel.timeSeconds>0)
+                    throw std::runtime_error("Synthetic chemistry projection failure");
+            });
+    },"Observer exceptions abort the integration");
+    ensure(calls>=2,"Observer should reach at least one accepted candidate");
+    near(s.vessel.timeSeconds,0,1e-12,"Observer failure preserves caller time");
+}
 static void testStoppedAtNonzeroStart(){
     auto s=state();
     s.vessel.timeSeconds=4.0;
@@ -187,5 +214,6 @@ int main(){
     testIntegratedRadiolysisAndHeating();
     testGuardsAndFailureDoesNotMutate();
     testStoppedAtNonzeroStart();
+    testAcceptedObserverAndFailure();
     std::cout<<"Adaptive vessel step doubling and conservation checks passed\n";
 }

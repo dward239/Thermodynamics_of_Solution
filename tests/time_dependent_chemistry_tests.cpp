@@ -105,6 +105,12 @@ void dynamicSolidAppearance(){
          "Y saturation");
     near(last.solidMoles.at("XY(s)"),.4,1e-8,
          "Solid forms after daughter ingrowth");
+    near(last.fluid.calculatedComponentMol.at("X"),.1,1e-8,
+         "Reported fluid X amount excludes solid");
+    near(last.fluid.calculatedComponentMol.at("Y"),.1,1e-8,
+         "Reported fluid Y amount excludes solid");
+    near(last.fluid.componentResidualMol.at("X"),0,1e-8,
+         "Reported component closure includes solids");
     require(last.maximumScaledComponentClosure<=1,
             "Conservation across precipitated solids");
 }
@@ -119,6 +125,24 @@ void allZero(){
         near(item.fluid.speciesMoles.at("X(org)"),0,1e-12,"Zero organic");
         near(item.maximumScaledComponentClosure,0,1e-12,"Zero conservation");
     }
+}
+void abortWhenNewDaughterHasNoSpecies() {
+    auto c=chem();
+    c.equilibriumTemplate.species.erase(c.equilibriumTemplate.species.begin()+2);
+    auto s=initial();
+    bool failed=false;
+    try {
+        // Initial t0 projection succeeds; once daughter Y enters the system,
+        // an accepted candidate must fail its chemistry projection.
+        (void)integrateVesselWithChemicalProjection(
+            s,10,network(),vessel(),c,options());
+    } catch(const std::invalid_argument&) {
+        failed=true;
+    }
+    require(failed,"Missing daughter phase representation must abort");
+    near(s.vessel.timeSeconds,0,1e-12,"Failed run must not mutate caller time");
+    near(s.vessel.nuclideAtoms.at("X-parent"),NA,1e-10,
+         "Failed run must not mutate caller nuclides");
 }
 void invalidModels(){
     auto c=chem();
@@ -138,9 +162,23 @@ void invalidModels(){
     invalid([&]{(void)integrateVesselWithChemicalProjection(
         initial(),1,network(),vessel(),c,options());},
         "Reject nonzero template placeholder");
+    c=chem();c.equilibriumTemplate.phases[1].id="water";
+    invalid([&]{(void)integrateVesselWithChemicalProjection(
+        initial(),1,network(),vessel(),c,options());},
+        "Reject duplicate phase names");
+    c=chem();c.equilibriumTemplate.species[1].id="X(aq)";
+    invalid([&]{(void)integrateVesselWithChemicalProjection(
+        initial(),1,network(),vessel(),c,options());},
+        "Reject duplicate species names");
+    c=chem();c.candidateSolids={{"XY",{{"X",1},{"Y",1}},std::log(.01)},
+                              {"XY",{{"X",1},{"Y",1}},std::log(.02)}};
+    invalid([&]{(void)integrateVesselWithChemicalProjection(
+        initial(),1,network(),vessel(),c,options());},
+        "Reject duplicate solid names");
 }
 }
 int main(){
-    phaseAndDaughter();dynamicSolidAppearance();allZero();invalidModels();
+    phaseAndDaughter();dynamicSolidAppearance();allZero();
+    abortWhenNewDaughterHasNoSpecies();invalidModels();
     std::cout<<"Time-dependent isotope-to-neutral-equilibrium projection passed\n";
 }
