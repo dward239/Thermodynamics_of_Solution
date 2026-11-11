@@ -1,5 +1,6 @@
 #include "adaptive_vessel_integration.h"
 #include <algorithm>
+#include <functional>
 #include <cmath>
 #include <limits>
 #include <map>
@@ -112,7 +113,8 @@ AdaptiveVesselTrajectory integrateRadiolyticHydrogenVessel(
     double endTimeSeconds,
     const DecayNetwork& network,
     const RadiolyticHydrogenVesselModel& model,
-    const AdaptiveVesselOptions& options) {
+    const AdaptiveVesselOptions& options,
+    const std::function<void(const AdaptiveVesselSample&)>& acceptedObserver) {
     checkOptions(options);
     if(!std::isfinite(initial.vessel.timeSeconds) ||
        !std::isfinite(endTimeSeconds) ||
@@ -127,6 +129,7 @@ AdaptiveVesselTrajectory integrateRadiolyticHydrogenVessel(
     AdaptiveVesselSample start;
     start.state=initial;
     start.pressurePa=pressurePa(initial,model);
+    if(acceptedObserver)acceptedObserver(start);
     trajectory.history.push_back(start);
     double nextDt=options.initialStepSeconds;
 
@@ -182,13 +185,13 @@ AdaptiveVesselTrajectory integrateRadiolyticHydrogenVessel(
                 throw std::runtime_error("Adaptive hydrogen conservation audit failed");
             const double expectedEnd=accepted.vessel.timeSeconds+dt;
             // Exact requested horizon when the last step ends there.
-            accepted=secondHalf.state;
-            accepted.vessel.timeSeconds=
+            auto candidate=secondHalf.state;
+            candidate.vessel.timeSeconds=
                 (dt>=remaining)?endTimeSeconds:expectedEnd;
             AdaptiveVesselSample sample;
-            sample.state=accepted;
+            sample.state=candidate;
             sample.acceptedStepSeconds=dt;
-            sample.pressurePa=pressurePa(accepted,model);
+            sample.pressurePa=pressurePa(candidate,model);
             sample.estimatedNormalizedError=error;
             sample.intervalEmittedEnergyJ=
                 firstHalf.vesselStep.decay.emittedEnergyJ+
@@ -199,6 +202,10 @@ AdaptiveVesselTrajectory integrateRadiolyticHydrogenVessel(
             sample.intervalConsumedH2Mol=consumed;
             sample.intervalH2ClosureResidualMol=closure;
             sample.intervalNuclideAtomClosureResidual=nucleusClosure;
+            // Reject invalid chemical projections before committing this
+            // accepted candidate; errors abort without a partial result.
+            if(acceptedObserver)acceptedObserver(sample);
+            accepted=std::move(candidate);
             trajectory.history.push_back(sample);
             trajectory.attempts.push_back({
                 trajectory.history[trajectory.history.size()-2].state.vessel.timeSeconds,

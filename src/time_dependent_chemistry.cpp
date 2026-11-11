@@ -177,11 +177,15 @@ TimeDependentChemistryTrajectory integrateVesselWithChemicalProjection(
     const AdaptiveVesselOptions& integrationOptions) {
     const auto names=checkModel(network,chemistry);
     TimeDependentChemistryTrajectory out;
+    // Chemistry is projected inline at each accepted candidate, including
+    // t0, before that candidate is committed by the adaptive controller.
+    // Trial rejection never invokes this callback. Chemistry remains one-way:
+    // the projected species do NOT influence time-step error estimation.
     out.vessel=integrateRadiolyticHydrogenVessel(
-        initial,endTimeSeconds,network,vesselModel,integrationOptions);
-    out.samples.reserve(out.vessel.history.size());
-    for(const auto& accepted:out.vessel.history)
-        out.samples.push_back(project(accepted,network,chemistry,names));
+        initial,endTimeSeconds,network,vesselModel,integrationOptions,
+        [&](const AdaptiveVesselSample& accepted) {
+            out.samples.push_back(project(accepted,network,chemistry,names));
+        });
     if(out.samples.size()!=out.vessel.history.size())
         throw std::runtime_error("Chemical and vessel time grids are inconsistent");
     return out;
