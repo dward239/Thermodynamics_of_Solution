@@ -75,3 +75,8 @@ target_compile_options(phase_partition PRIVATE -Wall -Wextra -Wpedantic)
 add_executable(phase_partition_tests tests/phase_partition_tests.cpp)
 target_link_libraries(phase_partition_tests PRIVATE phase_partition)
 add_test(NAME multi_liquid_linear_partition COMMAND phase_partition_tests)
+
+add_executable(vessel_cli src/vessel_cli.cpp)
+target_link_libraries(vessel_cli PRIVATE vessel_simulation)
+add_test(NAME synthetic_vessel_cli
+    COMMAND vessel_cli ${CMAKE_CURRENT_SOURCE_DIR}/examples/synthetic_vessel.txt)

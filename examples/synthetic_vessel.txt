@@ -1,0 +1,10 @@
+# SYNTHETIC TEST ONLY. X and Y are fictitious and 2 J/decay is not physical.
+nuclide X SyntheticElementX 10 2
+nuclide Y SyntheticElementY 0 0
+daughter X Y 1
+deposit X water 0.5
+atoms X 8
+gvalue water H2 1
+thermal 2 500 0 298.15 0.5
+headspace 0.01 1 298.15
+simulate 10 3
