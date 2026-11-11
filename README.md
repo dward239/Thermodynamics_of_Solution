@@ -18,6 +18,25 @@ A C++17 experimental aqueous chemical-equilibrium calculator, with modular ideal
 - Damped Newton iteration with finite-difference Jacobian and pivoted linear solves.
 - Parseable JSON and CSV outputs, residual diagnostics, deterministic command-line behavior, and GitHub Actions CI.
 
+## Experimental sweep and solid-phase prototype
+
+A `aqueous_sweep` executable computes a **series of independent equilibrium states**, not a time-dependent simulation. It sweeps either temperature (273.15–323.15 K) or the total of one fixed basis component and writes CSV results. Every point must converge; a failed point produces an error, not a partial-success file.
+
+```sh
+./build/aqueous_sweep examples/carbonate_ideal.txt temperature 273.15 323.15 6 sweep.csv
+./build/aqueous_sweep examples/carbonate_ideal.txt total Na+ 0.0005 0.0015 5 sodium.csv
+```
+
+A new `solid` input record models **one initially absent, electrically neutral solid phase in an ideal solution only**, with an ion activity product (IAP), thermodynamic solubility product Ksp, precipitated moles per liter and saturation index SI = log10(IAP/Ksp).
+
+```text
+solid AB_s -5.0 0.0 2 A+ 1 B- 1
+```
+
+Format: `solid NAME LOG10_KSP_REF DELTA_H_KJ_MOL N BASIS_NAME POSITIVE_STOICH ...`. The example `examples/precipitation_ideal.txt` provides a synthetic 1:1 equilibrium; it is **not authoritative chemistry data**. Competing solids, Davies/nonideal solid solutions, charge-balanced free basis components, kinetic precipitation and dissolution of an initial solid inventory remain unsupported and are rejected, not silently approximated. The first implementation targets one monotonic saturation crossing, not a general phase-stability solver.
+
+An independent analytic carbonate benchmark computes ideal carbonate distributions from closed-form species fractions and solves a scalar electroneutrality equation by bisection. That is an independent **numerical reference formulation**, not independent chemical validation or an external PHREEQC comparison.
+
 ## Build and run
 
 Requires CMake 3.16+ and a C++17 compiler.
@@ -118,7 +137,7 @@ Only numerical success and mass-action/conservation consistency are established 
 
 1. The included carbonate formation constants and enthalpies are not proven against a single curated literature database; **temperature-dependent pH predictions are not experimentally validated**.
 2. No robust benchmark comparison with PHREEQC or other independent reference code has been completed. That comparison is the next release gate.
-3. No explicit solvent chemical potential, ionic-size specific models, ion pairing parameterization, pressure dependence, redox, or phase change.
+3. No explicit solvent chemical potential, ionic-size specific models, ion pairing parameterization, pressure dependence or redox. Solid-phase support is limited to the ideal single-solid prototype described above.
 4. The legacy Pitzer-inspired functions are incomplete and **are not coupled** to the aqueous solver.
 5. The approximate Davies concentration convention should be replaced by consistent molality conversion and temperature-dependent water activity before higher-accuracy work.
 6. Initial guesses and numerical conditioning may fail for extreme or strongly coupled systems. The numerical implementation is a specialized solver, not a production geochemical engine.
@@ -132,4 +151,4 @@ Only numerical success and mass-action/conservation consistency are established 
 - `tests/aqueous_tests.cpp` — numerical verification and safeguards
 - `speciation.cpp` — earlier ideal-only Phase 2 solver, retained for compatibility
 
-The high-priority next steps are: independent PHREEQC comparison using identical constants, more chemical test systems, automated validation reports, a consistent thermodynamic data provenance scheme, and stricter dimensional/standard-state treatment.
+High-priority next steps remain: external PHREEQC comparisons using identical constants, broader solid-phase equilibrium and competing-phase support, diverse chemical test systems, validation reports, thermodynamic parameter provenance and rigorous standard-state conventions.
