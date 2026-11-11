@@ -10,6 +10,8 @@
 
 namespace thermo {
 namespace {
+constexpr double gasConstantJPerMolK=8.31446261815324;
+
 void requireNonnegativeFinite(double value, const std::string& label) {
     if(!std::isfinite(value) || value<0.0)
         throw std::invalid_argument("Invalid nonnegative chemical amount: "+label);
@@ -62,12 +64,30 @@ std::set<std::string> checkModel(
            species.componentStoichiometry.empty())
             throw std::invalid_argument("Invalid/duplicate fluid species in chemistry template");
     }
-    std::set<std::string> solidNames=speciesNames;
+    std::set<std::string> equilibriumNames=speciesNames;
     for(const auto& solid:model.candidateSolids) {
-        if(solid.id.empty() || !solidNames.insert(solid.id).second ||
+        if(solid.id.empty() || !equilibriumNames.insert(solid.id).second ||
            !std::isfinite(solid.standardMuOverRT) ||
            solid.componentStoichiometry.empty())
             throw std::invalid_argument("Invalid/duplicate pure solid candidate");
+    }
+    if(model.thermodynamics) {
+        const auto& thermo=*model.thermodynamics;
+        if(!std::isfinite(thermo.minimumTemperatureK) ||
+           !std::isfinite(thermo.maximumTemperatureK) ||
+           !std::isfinite(thermo.referenceTemperatureK) ||
+           thermo.minimumTemperatureK<=0.0 ||
+           thermo.maximumTemperatureK<=thermo.minimumTemperatureK ||
+           thermo.referenceTemperatureK<thermo.minimumTemperatureK ||
+           thermo.referenceTemperatureK>thermo.maximumTemperatureK)
+            throw std::invalid_argument("Invalid chemical thermodynamics temperature range");
+        const auto& enthalpies=thermo.standardEnthalpyJPerMolById;
+        for(const auto& [id,enthalpy]:enthalpies)
+            if(!equilibriumNames.count(id) || !std::isfinite(enthalpy))
+                throw std::invalid_argument("Invalid standard enthalpy for "+id);
+        for(const auto& id:equilibriumNames)
+            if(!enthalpies.count(id))
+                throw std::invalid_argument("Missing standard enthalpy for "+id);
     }
     for(const auto& nuclide:network.nuclides())
         if(!ids.count(nuclide.element))
@@ -89,6 +109,40 @@ std::set<std::string> checkModel(
             if(!ids.count(component) || count<=0)
                 throw std::invalid_argument("Unknown/invalid solid component: "+solid.id);
     return ids;
+}
+
+void updateThermodynamicInputs(
+    IdealMultiphaseModel& fluid, std::vector<IdealPureSolid>& solids,
+    const ChemicalProjectionThermodynamics& thermo, double temperatureK) {
+    if(!std::isfinite(temperatureK) || temperatureK<thermo.minimumTemperatureK ||
+       temperatureK>thermo.maximumTemperatureK)
+        throw std::domain_error("Vessel temperature outside chemical thermodynamics range: "+
+                                std::to_string(temperatureK)+" K");
+    const double referenceK=thermo.referenceTemperatureK;
+    if(temperatureK==referenceK)
+        return;
+
+    // Integrated Gibbs-Helmholtz relation at constant standard enthalpy.
+    const double inverseTemperatureDifference=(referenceK-temperatureK)/temperatureK/referenceK;
+    const auto adjustPotential=[&](auto& species) {
+        const double enthalpy=thermo.standardEnthalpyJPerMolById.at(species.id);
+        species.standardMuOverRT+=enthalpy/gasConstantJPerMolK*inverseTemperatureDifference;
+        if(!std::isfinite(species.standardMuOverRT))
+            throw std::runtime_error("Nonfinite standard chemical potential for "+species.id);
+    };
+    for(auto& species:fluid.species)
+        adjustPotential(species);
+    for(auto& solid:solids)
+        adjustPotential(solid);
+    for(auto& phase:fluid.phases) {
+        if(phase.kind!=IdealFluidPhaseKind::Gas)
+            continue;
+        // At fixed standard pressure, c/c°(T) equals p/p°.
+        phase.standardConcentrationMolM3*=referenceK/temperatureK;
+        if(!std::isfinite(phase.standardConcentrationMolM3) ||
+           phase.standardConcentrationMolM3<=0.0)
+            throw std::runtime_error("Invalid gas standard concentration for "+phase.id);
+    }
 }
 
 TimeDependentChemistrySample project(
@@ -136,6 +190,9 @@ TimeDependentChemistrySample project(
         if(allowed)activeSolids.push_back(solid);
         out.solidMoles[solid.id]=0.0;
     }
+    if(config.thermodynamics)
+        updateThermodynamicInputs(reduced,activeSolids,*config.thermodynamics,
+                                  vesselSample.state.vessel.temperatureK);
     if(!reduced.components.empty()) {
         if(reduced.species.empty())
             throw std::invalid_argument("Positive component inventory has no permissible fluid species");

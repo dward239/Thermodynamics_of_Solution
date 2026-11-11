@@ -22,6 +22,7 @@ package RadioThermochemicalChemistryCoupling {
 
     part def AcceptedStepController {
         port nuclideOut : NuclidePort;
+        port candidateTemperatureOut : ThermalPort;
         port chemistryIn : ~EquilibriumProjectionPort;
     }
     part def NuclideElementMapper {
@@ -30,6 +31,7 @@ package RadioThermochemicalChemistryCoupling {
     }
     part def ReducedChemicalEquilibrium {
         port elementsIn : ~ElementInventoryPort;
+        port candidateTemperatureIn : ~ThermalPort;
         port equilibriumOut : EquilibriumProjectionPort;
     }
     part def AcceptedStepChemicalIBD {
@@ -38,12 +40,14 @@ package RadioThermochemicalChemistryCoupling {
         part equilibrium : ReducedChemicalEquilibrium;
         connect controller.nuclideOut to elementMapping.nuclideIn;
         connect elementMapping.elementsOut to equilibrium.elementsIn;
+        connect controller.candidateTemperatureOut to equilibrium.candidateTemperatureIn;
         connect equilibrium.equilibriumOut to controller.chemistryIn;
     }
 
     action def MapNuclideAtomsToElementMol;
     action def AddBackgroundComponentInventories;
     action def SuppressZeroInventorySpeciesAndSolids;
+    action def EvaluateConfiguredStandardStates;
     action def SolveNeutralMultiphaseEquilibrium;
     action def AuditFluidAndSolidElementConservation;
     action def CommitCandidateTimeState;
@@ -52,18 +56,21 @@ package RadioThermochemicalChemistryCoupling {
         action map : MapNuclideAtomsToElementMol;
         action background : AddBackgroundComponentInventories;
         action removeAbsent : SuppressZeroInventorySpeciesAndSolids;
+        action standardStates : EvaluateConfiguredStandardStates;
         action solve : SolveNeutralMultiphaseEquilibrium;
         action audit : AuditFluidAndSolidElementConservation;
         action commit : CommitCandidateTimeState;
         first map then background;
         first background then removeAbsent;
-        first removeAbsent then solve;
+        first removeAbsent then standardStates;
+        first standardStates then solve;
         first solve then audit;
         first audit then commit;
     }
 
     item def AcceptedCandidateEvent;
     item def MappingCompletedEvent;
+    item def StandardStatesReadyEvent;
     item def EquilibriumConvergedEvent;
     item def ConservationPassedEvent;
     item def ProjectionFailedEvent;
@@ -71,6 +78,7 @@ package RadioThermochemicalChemistryCoupling {
     state def AcceptedChemistryProjectionStates {
         state awaitingCandidate;
         state mappingInventory;
+        state evaluatingStandardStates;
         state solvingEquilibrium;
         state auditingConservation;
         state readyToCommit;
@@ -79,12 +87,16 @@ package RadioThermochemicalChemistryCoupling {
         transition start first awaitingCandidate
             accept AcceptedCandidateEvent then mappingInventory;
         transition mapped first mappingInventory
-            accept MappingCompletedEvent then solvingEquilibrium;
+            accept MappingCompletedEvent then evaluatingStandardStates;
+        transition propertiesReady first evaluatingStandardStates
+            accept StandardStatesReadyEvent then solvingEquilibrium;
         transition solved first solvingEquilibrium
             accept EquilibriumConvergedEvent then auditingConservation;
         transition conserved first auditingConservation
             accept ConservationPassedEvent then readyToCommit;
         transition failedMap first mappingInventory
+            accept ProjectionFailedEvent then failed;
+        transition failedProperties first evaluatingStandardStates
             accept ProjectionFailedEvent then failed;
         transition failedSolve first solvingEquilibrium
             accept ProjectionFailedEvent then failed;

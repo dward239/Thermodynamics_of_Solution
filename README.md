@@ -316,8 +316,10 @@ conservation; failure aborts the run **before** the candidate is committed.
 
 This is **one-way operator splitting**, not the intended fully coupled
 multiphase thermochemical DAE. Chemistry does not feed back to vessel
-thermal/radiolysis/gas/pressure dynamics, and user-specified dimensionless
-standard chemical potentials remain constant even when vessel temperature
-changes. Charged/nonideal chemistry is not supported by this wrapper.
+thermal/radiolysis/gas/pressure dynamics. An optional constant-enthalpy
+model uses the accepted candidate's temperature to update the reference
+chemical potentials and the ideal gas standard concentrations within
+the supplied data range. The projection is restricted to neutral ideal
+chemistry.
 See [coupling limitations](docs/time-dependent-chemical-projection.md) and
 [chemical connection, activity and state views](architecture/sysml-v2/views/09-chemistry-time-coupling.md).

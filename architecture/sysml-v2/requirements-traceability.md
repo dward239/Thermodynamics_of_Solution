@@ -17,6 +17,7 @@ chemical equilibrium and a coupled thermochemical DAE remain unimplemented.
 | RT-029 | Execute chemistry only for accepted candidates before commit; abort on chemical failure | `AdaptiveVesselSample` acceptance callback | `testAcceptedObserverAndFailure`, `abortWhenNewDaughterHasNoSpecies` |
 | RT-030 | Independently reconstruct declared conserved components across fluids and solids | `TimeDependentChemistrySample.maximumScaledComponentClosure` | `dynamicSolidAppearance` |
 | RT-031 | Reject charged and invalid/unsupported model templates | `src/time_dependent_chemistry.cpp::checkModel` | `invalidModels` |
+| RT-032 | Evaluate optional fluid and solid standard states at candidate vessel temperature within the configured data range | `ChemicalProjectionThermodynamics` and `updateThermodynamicInputs` | `temperatureDependentFluidPartition`, `temperatureDependentPrecipitation`, `thermodynamicsValidation` |
 
 ## Numerical acceptance and conservation
 
@@ -43,7 +44,7 @@ subset is now implemented); RT-009 physical and experimental validation.
 
 ## Restricted chemical projection (not DAE)
 
-RT-027 through RT-031 are implemented only for neutral ideal-dilute
+RT-027 through RT-032 are implemented only for neutral ideal-dilute
 fluid chemistry with <=8 initially absent pure solids. The accepted-sample
 observer is called **before commit**, but projected species do not affect
 the adaptive local-error criterion or any vessel derivatives. The input
