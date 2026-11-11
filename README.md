@@ -193,3 +193,24 @@ radionuclide-specific chemical speciation, nonideal activities, or a fully
 coupled multiphase equilibrium solver.
 
 See `docs/multiphase-linear-partition.md` and corresponding CTest cases.
+
+### Data-driven radionuclide demonstration CLI
+
+The experimental `vessel_cli` executable accepts arbitrary declared nuclides,
+decay branches, prescribed energy-deposition fractions and radiolysis G-values
+from `examples/synthetic_vessel.txt`. Run with:
+
+    ./build/vessel_cli examples/synthetic_vessel.txt output.csv
+
+The example is intentionally synthetic. Pressure is computed from fixed headspace
+moles and temperature; gross radiolytic H2 formation is NOT net gas generation.
+See `docs/vessel-input-format.md` for units and restrictions.
+
+### Restricted decay-to-neutral-phase partition
+
+`decay_phase_partition` exercises an end-to-end conversion from arbitrary
+decay daughter atom inventories to elemental mole totals and fixed-ratio
+partitioning among aqueous/organic/gas phases. Each element is provisionally
+treated as a single neutral pseudo-solute: **this is not radionuclide
+speciation, redox chemistry, or full multiphase equilibrium**. See
+`docs/decay-phase-partition.md` and automated conservation tests.

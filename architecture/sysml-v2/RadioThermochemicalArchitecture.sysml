@@ -38,6 +38,9 @@ package RadioThermochemicalArchitecture {
     part def HeadspacePressureModel {
         attribute pressurePa : Real;
     }
+    part def NeutralDecayPartitionBridge {
+        attribute daughterElementMoles : Real;
+    }
     part def SimulationController {
         part chemicalSystem : ChemicalSystemModel;
         part inventory : NuclideInventoryModel;
@@ -49,6 +52,7 @@ package RadioThermochemicalArchitecture {
         part inventoryBridge : NuclearChemicalInventoryBridge;
         part partition : DilutePhasePartitionModel;
         part headspace : HeadspacePressureModel;
+        part decayPartitionBridge : NeutralDecayPartitionBridge;
     }
     part simulator : SimulationController;
 }

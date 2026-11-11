@@ -16,9 +16,10 @@ in CI. Architectural agreement is a design objective, not a verified claim.
 | RadiolysisSourceModel | `src/radiolysis_sources.cpp` | Gross G-value production, not net gas |
 | ThermalBalanceModel | `src/lumped_thermal.cpp` | Lumped constant-capacity energy balance |
 | ChemicalEquilibriumModel | `include/aqueous_engine.h` | Existing restricted aqueous solver |
-| SimulationController | `src/vessel_simulation.cpp` | Restricted single-step decay/heat/ideal-gas demonstration; no chemistry coupling |
+| SimulationController | `src/vessel_simulation.cpp` and `src/vessel_cli.cpp` | Restricted decay/heat/pressure step and data-driven synthetic CLI |
 | Nuclide-to-chemical-component bridge | `src/inventory_chemistry_bridge.cpp` | Per-isotope atoms to elemental moles, no phase allocation |
 | Neutral linear phase partition | `src/phase_partition.cpp` | Arbitrary fixed-volume liquid/gas phases; neutral dilute species only |
+| Restricted decay-to-neutral partition bridge | `src/decay_phase_partition.cpp` | Element totals from daughter nuclei; each element treated as one neutral pseudo-solute |
 
 ## Engineering requirement traceability
 
@@ -36,6 +37,8 @@ in CI. Architectural agreement is a design objective, not a verified claim.
 | RT-010 | Convert isotopic inventories into chemical elemental mole totals. | `tests/inventory_bridge_tests.cpp` |
 | RT-011 | Distribute neutral dilute solutes among arbitrary liquid and gas phases with mass conservation. | `tests/phase_partition_tests.cpp` |
 | RT-012 | Demonstrate source-separated decay heating and headspace pressure in a closed vessel. | `tests/vessel_tests.cpp` |
+| RT-013 | Accept user-defined nuclide networks and time grids without recompiling code. | `examples/synthetic_vessel.txt`, `synthetic_vessel_cli` CTest |
+| RT-014 | Map newly generated daughter elements to neutral multi-liquid partition inventories and reject missing parameters. | `tests/decay_phase_partition_tests.cpp` |
 
 ## Critical separation-of-concerns decisions
 
