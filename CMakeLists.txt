@@ -89,3 +89,11 @@ target_compile_options(decay_phase_partition PRIVATE -Wall -Wextra -Wpedantic)
 add_executable(decay_phase_partition_tests tests/decay_phase_partition_tests.cpp)
 target_link_libraries(decay_phase_partition_tests PRIVATE decay_phase_partition)
 add_test(NAME nuclear_neutral_phase_partition COMMAND decay_phase_partition_tests)
+
+# Restricted generalized ideal-dilute fluid chemical-equilibrium prototype.
+add_library(ideal_multiphase_equilibrium src/ideal_multiphase_equilibrium.cpp)
+target_include_directories(ideal_multiphase_equilibrium PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_compile_options(ideal_multiphase_equilibrium PRIVATE -Wall -Wextra -Wpedantic)
+add_executable(ideal_multiphase_tests tests/ideal_multiphase_tests.cpp)
+target_link_libraries(ideal_multiphase_tests PRIVATE ideal_multiphase_equilibrium)
+add_test(NAME ideal_multiphase_mass_action COMMAND ideal_multiphase_tests)

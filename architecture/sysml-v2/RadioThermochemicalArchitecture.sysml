@@ -26,6 +26,11 @@ package RadioThermochemicalArchitecture {
         attribute temperatureK : Real;
         attribute sensibleEnergyJ : Real;
     }
+    part def GeneralIdealFluidEquilibriumModel {
+        attribute componentCount : Integer;
+        attribute fluidSpeciesCount : Integer;
+        attribute normalizedMassResidual : Real;
+    }
     part def ChemicalEquilibriumModel {
         attribute normalizedResidual : Real;
     }
@@ -49,6 +54,7 @@ package RadioThermochemicalArchitecture {
         part radiolysis : RadiolysisSourceModel;
         part thermal : ThermalBalanceModel;
         part equilibrium : ChemicalEquilibriumModel;
+        part idealFluid : GeneralIdealFluidEquilibriumModel;
         part inventoryBridge : NuclearChemicalInventoryBridge;
         part partition : DilutePhasePartitionModel;
         part headspace : HeadspacePressureModel;
