@@ -173,6 +173,8 @@ IdealEquilibriumResult solveIdealMultiphase(const IdealMultiphaseModel& model,
     IdealEquilibriumResult result;
     result.iterations=iterations;
     result.maxNormalizedResidual=current.norm;
+    for(std::size_t i=0;i<n;++i)
+        result.componentPotentialOverRT[model.components[i].id]=x[i];
     for(std::size_t s=0;s<p.nu.size();++s) {
         result.speciesMoles[model.species[s].id]=current.moles[s];
         result.concentrationsMolM3[model.species[s].id]=current.moles[s]/p.volumes[s];
@@ -185,4 +187,157 @@ IdealEquilibriumResult solveIdealMultiphase(const IdealMultiphaseModel& model,
     }
     return result;
 }
+
+IdealSolidEquilibriumResult solveIdealMultiphaseWithSolids(
+    const IdealMultiphaseModel& fluidModel,
+    const std::vector<IdealPureSolid>& candidates,
+    int maxIterations,double tolerance) {
+    if(maxIterations<1 || maxIterations>100000 ||
+       !std::isfinite(tolerance) || tolerance<=0 || tolerance>=0.01)
+        throw std::invalid_argument("Invalid solid equilibrium solver options");
+    if(candidates.size()>8)
+        throw std::invalid_argument("Solid candidate enumeration limited to eight phases");
+    const auto prepared=validate(fluidModel);
+    const auto base=solveIdealMultiphase(fluidModel,maxIterations,tolerance);
+    IdealSolidEquilibriumResult output;
+    output.fluidSolution=base;
+    if(candidates.empty())return output;
+    const std::size_t n=fluidModel.components.size();
+    const std::size_t ns=candidates.size();
+    std::map<std::string,std::size_t> indices;
+    for(std::size_t i=0;i<n;++i)indices[fluidModel.components[i].id]=i;
+    std::set<std::string> names;
+    for(const auto& sp:fluidModel.species)names.insert(sp.id);
+    std::vector<std::vector<double>> matrix(ns,std::vector<double>(n,0.0));
+    for(std::size_t s=0;s<ns;++s) {
+        const auto& solid=candidates[s];
+        if(solid.id.empty() || !names.insert(solid.id).second ||
+           solid.componentStoichiometry.empty() ||
+           !std::isfinite(solid.standardMuOverRT))
+            throw std::invalid_argument("Invalid/duplicate solid definition");
+        for(const auto& [name,count]:solid.componentStoichiometry) {
+            auto it=indices.find(name);
+            if(it==indices.end()||count<=0)
+                throw std::invalid_argument("Invalid solid stoichiometry: "+solid.id);
+            matrix[s][it->second]=count;
+        }
+    }
+    std::vector<double> start(n);
+    for(std::size_t i=0;i<n;++i)
+        start[i]=base.componentPotentialOverRT.at(fluidModel.components[i].id);
+    const auto affinity=[&](const std::vector<double>& x,std::size_t s) {
+        double value=-candidates[s].standardMuOverRT;
+        for(std::size_t i=0;i<n;++i)value+=matrix[s][i]*x[i];
+        return value;
+    };
+    double totalBound=0.0;
+    for(double b:prepared.totals)totalBound+=b;
+    const double qTolerance=std::max(1e-13,1e-8*totalBound);
+    // Enumerate every subset of <=8 candidate solids, solving the equality
+    // system and accepting only thermodynamically complementary solutions.
+    for(std::size_t mask=0;mask<(std::size_t(1)<<ns);++mask) {
+        std::vector<std::size_t> active;
+        for(std::size_t s=0;s<ns;++s)
+            if(mask&(std::size_t(1)<<s))active.push_back(s);
+        if(active.size()>n)continue;
+        const std::size_t k=active.size();
+        std::vector<double> x=start,q(k,0.0);
+        Calculation currentFluid;
+        std::vector<double> residual;
+        double norm=0.0;
+        const auto assess=[&](const std::vector<double>& xx,
+                              const std::vector<double>& qq,
+                              Calculation& fluid,
+                              std::vector<double>& residualOut,
+                              double& normOut) {
+            if(!evaluate(prepared,xx,fluid))return false;
+            residualOut=fluid.residual;
+            for(std::size_t j=0;j<k;++j)
+                for(std::size_t i=0;i<n;++i)
+                    residualOut[i]+=matrix[active[j]][i]*qq[j]/prepared.totals[i];
+            for(std::size_t j=0;j<k;++j)
+                residualOut.push_back(affinity(xx,active[j]));
+            normOut=0.0;
+            for(double v:residualOut) {
+                if(!std::isfinite(v))return false;
+                normOut=std::max(normOut,std::abs(v));
+            }
+            return true;
+        };
+        if(!assess(x,q,currentFluid,residual,norm))continue;
+        int iterations=0;
+        while(norm>tolerance && iterations<maxIterations) {
+            std::vector<std::vector<double>> jac(n+k,std::vector<double>(n+k,0));
+            for(std::size_t s=0;s<prepared.nu.size();++s)
+                for(std::size_t i=0;i<n;++i)
+                    for(std::size_t j=0;j<n;++j)
+                        jac[i][j]+=(prepared.nu[s][i]*prepared.nu[s][j]*
+                                    currentFluid.moles[s])/prepared.totals[i];
+            for(std::size_t j=0;j<k;++j) {
+                for(std::size_t i=0;i<n;++i) {
+                    jac[i][n+j]=matrix[active[j]][i]/prepared.totals[i];
+                    jac[n+j][i]=matrix[active[j]][i];
+                }
+            }
+            auto rhs=residual;
+            for(auto& v:rhs)v=-v;
+            std::vector<double> delta;
+            if(!solveLinear(jac,rhs,delta))break;
+            bool accepted=false;
+            for(unsigned trial=0;trial<55;++trial) {
+                const double alpha=std::ldexp(1.0,-static_cast<int>(trial));
+                auto xx=x,qq=q;
+                for(std::size_t i=0;i<n;++i)xx[i]+=alpha*delta[i];
+                for(std::size_t j=0;j<k;++j)qq[j]+=alpha*delta[n+j];
+                Calculation ff;std::vector<double> rr;double nn=0.0;
+                if(assess(xx,qq,ff,rr,nn)&&nn<norm) {
+                    x.swap(xx);q.swap(qq);
+                    currentFluid=std::move(ff);residual=std::move(rr);norm=nn;
+                    accepted=true;
+                    break;
+                }
+            }
+            if(!accepted)break;
+            ++iterations;
+        }
+        if(norm>tolerance)continue;
+        bool complementary=true;
+        for(double amount:q)
+            if(!std::isfinite(amount) || amount < -qTolerance)
+                complementary=false;
+        for(std::size_t s=0;s<ns;++s) {
+            const double a=affinity(x,s);
+            const bool present=(mask&(std::size_t(1)<<s))!=0;
+            if(!std::isfinite(a) ||
+               (present && std::abs(a)>tolerance) ||
+               (!present && a>tolerance))
+                complementary=false;
+        }
+        if(!complementary)continue;
+        output.fluidSolution=IdealEquilibriumResult{};
+        output.fluidSolution.iterations=iterations;
+        output.fluidSolution.maxNormalizedResidual=norm;
+        for(std::size_t i=0;i<n;++i)
+            output.fluidSolution.componentPotentialOverRT[fluidModel.components[i].id]=x[i];
+        for(std::size_t s=0;s<fluidModel.species.size();++s) {
+            output.fluidSolution.speciesMoles[fluidModel.species[s].id]=currentFluid.moles[s];
+            output.fluidSolution.concentrationsMolM3[fluidModel.species[s].id]=
+                currentFluid.moles[s]/prepared.volumes[s];
+        }
+        for(std::size_t i=0;i<n;++i)
+            output.fluidSolution.componentResidualMol[fluidModel.components[i].id]=
+                residual[i]*prepared.totals[i];
+        for(std::size_t s=0;s<ns;++s) {
+            output.solidMoles[candidates[s].id]=0.0;
+            output.solidAffinityOverRT[candidates[s].id]=affinity(x,s);
+        }
+        for(std::size_t j=0;j<k;++j)
+            output.solidMoles[candidates[active[j]].id]=std::max(0.0,q[j]);
+        return output;
+    }
+    throw std::runtime_error(
+        "No complementary ideal solid-phase equilibrium found; "
+        "phase candidates may be inconsistent or the nonlinear solve may have failed");
+}
+
 } // namespace thermo

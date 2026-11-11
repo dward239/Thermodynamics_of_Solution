@@ -228,3 +228,16 @@ This is **not** yet a general radioactive multiphase chemical-equilibrium
 engine. Charged electrolytes, nonideal activity/fugacity, solids, dynamic phase
 stability, coupled thermal response and chemical kinetics are not integrated.
 See `docs/general-ideal-fluid-equilibrium.md`.
+
+### Bounded multiple-solid equilibrium prototype
+
+`solveIdealMultiphaseWithSolids` extends the generalized neutral ideal-fluid
+equilibrium model with up to **eight initially absent pure-solid candidate
+phases**. It enumerates active-solid subsets and checks component conservation,
+solid positivity and the requirement that absent phases remain undersaturated.
+
+Synthetic tests cover precipitation, undersaturation, competing polymorphs,
+and two solids simultaneously sharing a conserved component. This is **not**
+yet a fully general solid Gibbs minimizer; it does not implement solid
+solutions, seed inventories, charged electrolyte thermodynamics or phase
+kinetics. See `docs/ideal-multisolid-equilibrium.md`.
