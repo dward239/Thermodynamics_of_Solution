@@ -1,4 +1,5 @@
 #include "aqueous_engine.h"
+#include "aqueous_solid.h"
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -229,6 +230,16 @@ Model readModel(const std::string& filename) {
                 } catch(...) {throw std::runtime_error("Invalid total at line "+std::to_string(number));}
             }
             m.components.push_back(std::move(c));
+        } else if(key=="solid") {
+            Solid s; int count=0;
+            if(!(in>>s.name>>s.logKspReference>>s.deltaHkJMol>>count) || count<1)
+                throw std::runtime_error("Bad solid at line "+std::to_string(number));
+            for(int i=0;i<count;++i) {
+                std::string name; int nu=0;
+                if(!(in>>name>>nu) || nu<=0 || !s.dissolutionStoichiometry.emplace(name,nu).second)
+                    throw std::runtime_error("Bad dissolution stoichiometry at line "+std::to_string(number));
+            }
+            m.solids.push_back(std::move(s));
         } else if(key=="complex") {
             Complex c;int count=0;
             if(!(in>>c.name>>c.charge>>c.logKReference>>c.deltaHkJMol>>count) || count<1)
@@ -251,6 +262,7 @@ Result solve(const Model& model,const Options& options) {
     if(options.maxIterations<1 || !std::isfinite(options.relativeTolerance) ||
        options.relativeTolerance<=0 || options.relativeTolerance>=0.1)
         throw std::invalid_argument("Invalid solver options");
+    if(!model.solids.empty()) return solveSingleIdealSolid(model, options);
     const Context ctx=prepare(model);
     const std::size_t n=model.components.size();
     const bool davies=model.activity==ActivityModel::Davies;
@@ -339,9 +351,13 @@ std::string toJson(const Result& r) {
        <<"  \"ionic_strength_mol_L\": "<<r.ionicStrengthMolL<<",\n"
        <<"  \"charge_residual_mol_L\": "<<r.chargeResidualMolL<<",\n";
     if(r.hasPH) out<<"  \"pH\": "<<r.pH<<",\n";
-    for(const auto* field : {"concentrations_mol_L","activities","component_residuals_mol_L"}) {
-        const auto& data=std::string(field)=="concentrations_mol_L"?r.concentrationMolL:
-                         std::string(field)=="activities"?r.activity:r.componentResidualMolL;
+    for(const auto* field : {"concentrations_mol_L","activities","component_residuals_mol_L",
+                             "solids_precipitated_mol_L","saturation_indices"}) {
+        const std::string key(field);
+        const auto& data=key=="concentrations_mol_L"?r.concentrationMolL:
+                         key=="activities"?r.activity:
+                         key=="component_residuals_mol_L"?r.componentResidualMolL:
+                         key=="solids_precipitated_mol_L"?r.solidPrecipitatedMolL:r.saturationIndex;
         out<<"  \""<<field<<"\": {";
         bool first=true;
         for(const auto& [name,value]:data) {
@@ -350,7 +366,7 @@ std::string toJson(const Result& r) {
             out<<"\n    \""<<escapeJson(name)<<"\": "<<value;
         }
         if(!data.empty()) out<<"\n  ";
-        out<<"}"<<(std::string(field)=="component_residuals_mol_L"?"\n":",\n");
+        out<<"}"<<(key=="saturation_indices"?"\n":",\n");
     }
     out<<"}\n";
     return out.str();

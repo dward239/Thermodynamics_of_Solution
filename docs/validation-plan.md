@@ -36,3 +36,16 @@ For comparisons, explicitly fix temperature, pressure, reference state, formatio
 These are **proposed targets, not achieved independent validation results**.
 
 Do not label the program design-grade or nuclear-grade without an appropriate software quality program and scientific validation.
+
+
+## Analytical reference tests and new functionality (development)
+
+The new ideal carbonate benchmark solves the charge balance independently using scalar bisection and closed-form carbonate species distribution coefficients. It tests pH and species concentrations without calling the multivariable Newton implementation. This is an **independent mathematical reference check**, not external scientific validation. Constant values in the repository remain synthetic/illustrative.
+
+New sweep tests cover endpoints, monotonic parameter changes, and invalid model/range rejection. Ideal single-solid tests check 1:1 AB(s) precipitation against the analytic solubility product `[A+][B-] = Ksp` and overall conservation. Multiple solids, nonideal/phase coupling, initial solids and a free charge-balance basis are not supported.
+
+### Outstanding external chemistry validation
+
+PHREEQC or an equivalent trusted reference solver must be run separately against *exactly matched* species definitions, thermodynamic constants, temperature, activity formulation, standard states and component totals. Proposed external comparison cases are the ideal carbonate system, a dilute Davies electrolyte, and a temperature series at 273.15, 283.15, 298.15, 313.15 and 323.15 K. Record reference program version, source data, input files and output differences.
+
+**No external PHREEQC comparisons or literature-validated thermodynamic parameter sets have been executed for this change.** Do not claim scientific qualification from passing CI or synthetic analytic checks.

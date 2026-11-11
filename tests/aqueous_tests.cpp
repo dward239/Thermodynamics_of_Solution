@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <string>
 #include <algorithm>
+#include <limits>
 using namespace aqueous;
 void require(bool v,const char* message) {if(!v) throw std::runtime_error(message);}
 void close(double a,double b,double tolerance,const char* message) {
@@ -74,5 +75,39 @@ int main() {
     try {auto bad=association();bad.complexes[0].charge=1;solve(bad);}
     catch(const std::invalid_argument&) {caught=true;}
     require(caught,"Charge-inconsistent reaction rejected");
+
+    // Reconstruct mass action directly from the returned species activities.
+    const double logK1 = std::log10(water.activity.at("HCO3-"))
+        + std::log10(water.activity.at("H+"))
+        - std::log10(water.activity.at("CO2*"));
+    close(logK1, -6.35, 1e-8, "Carbonate first dissociation mass action");
+    const double logK12 = std::log10(water.activity.at("CO3--"))
+        + 2*std::log10(water.activity.at("H+"))
+        - std::log10(water.activity.at("CO2*"));
+    close(logK12, -16.68, 1e-8, "Carbonate second dissociation mass action");
+
+    caught=false;
+    try {
+        auto bad=association();
+        Options strict;strict.maxIterations=1;strict.relativeTolerance=1e-12;
+        solve(bad,strict);
+    } catch(const std::runtime_error&) {caught=true;}
+    require(caught,"Nonconvergence must be reported, not silently accepted");
+    caught=false;
+    try {
+        auto bad=association();
+        bad.components[0].totalMolL=std::numeric_limits<double>::infinity();
+        solve(bad);
+    } catch(const std::invalid_argument&) {caught=true;}
+    require(caught,"Reject infinite component totals");
+    caught=false;
+    try {
+        auto bad=association();
+        bad.components[1].name=bad.components[0].name;
+        solve(bad);
+    } catch(const std::invalid_argument&) {caught=true;}
+    require(caught,"Reject duplicate basis names");
+    close(r.concentrationMolL.at("A+")+r.concentrationMolL.at("AB"),
+          0.01,1e-11,"Independent association conservation");
     std::cout<<"MVP+1 numerical checks passed\n";
 }
