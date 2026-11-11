@@ -131,3 +131,12 @@ target_compile_options(radiolytic_hydrogen_vessel PRIVATE -Wall -Wextra -Wpedant
 add_executable(hydrogen_kinetics_tests tests/hydrogen_kinetics_tests.cpp)
 target_link_libraries(hydrogen_kinetics_tests PRIVATE radiolytic_hydrogen_vessel)
 add_test(NAME radiolytic_hydrogen_kinetics COMMAND hydrogen_kinetics_tests)
+
+# Adaptive step-doubling zero-dimensional decay/H2/thermal/pressure controller.
+add_library(adaptive_vessel_integration src/adaptive_vessel_integration.cpp)
+target_include_directories(adaptive_vessel_integration PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(adaptive_vessel_integration PUBLIC radiolytic_hydrogen_vessel)
+target_compile_options(adaptive_vessel_integration PRIVATE -Wall -Wextra -Wpedantic)
+add_executable(adaptive_vessel_tests tests/adaptive_vessel_tests.cpp)
+target_link_libraries(adaptive_vessel_tests PRIVATE adaptive_vessel_integration)
+add_test(NAME adaptive_radiolytic_vessel_time_integration COMMAND adaptive_vessel_tests)
