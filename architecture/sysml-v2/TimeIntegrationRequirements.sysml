@@ -7,8 +7,8 @@ package RadioThermochemicalTimeRequirements {
         attribute acceptedStepCount : Integer;
         attribute rejectedStepCount : Integer;
         attribute endTimeSeconds : Real;
-        attribute nuclearClosureAtoms : Real;
-        attribute hydrogenClosureMol : Real;
+        attribute normalizedNuclearClosure : Real;
+        attribute normalizedHydrogenClosure : Real;
     }
     requirement def TimeProgressRequirement {
         subject model : AdaptiveVesselSubject;
@@ -24,11 +24,17 @@ package RadioThermochemicalTimeRequirements {
     }
     requirement def NuclearConservationRequirement {
         subject model : AdaptiveVesselSubject;
-        require constraint { model.nuclearClosureAtoms == 0.0 }
+        require constraint {
+            model.normalizedNuclearClosure >= 0.0 and
+            model.normalizedNuclearClosure <= 1.0
+        }
     }
     requirement def HydrogenConservationRequirement {
         subject model : AdaptiveVesselSubject;
-        require constraint { model.hydrogenClosureMol == 0.0 }
+        require constraint {
+            model.normalizedHydrogenClosure >= 0.0 and
+            model.normalizedHydrogenClosure <= 1.0
+        }
     }
 
     requirement timeProgress : TimeProgressRequirement;

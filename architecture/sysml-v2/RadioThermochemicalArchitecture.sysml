@@ -64,6 +64,12 @@ package RadioThermochemicalArchitecture {
         attribute headspaceHydrogenMol : Real;
         attribute consumedHydrogenMol : Real;
     }
+    part def AdaptiveTimeIntegratorModel {
+        attribute acceptedStepCount : Integer;
+        attribute rejectedStepCount : Integer;
+        attribute currentTimeSeconds : Real;
+        attribute localErrorEstimate : Real;
+    }
     part def SimulationController {
         part chemicalSystem : ChemicalSystemModel;
         part inventory : NuclideInventoryModel;
@@ -77,6 +83,7 @@ package RadioThermochemicalArchitecture {
         part chargeBalance : SinglePhaseChargeBalance;
         part daviesCoupling : DaviesActivityCoupling;
         part hydrogenKinetics : RadiolyticHydrogenKinetics;
+        part adaptiveIntegrator : AdaptiveTimeIntegratorModel;
         part inventoryBridge : NuclearChemicalInventoryBridge;
         part partition : DilutePhasePartitionModel;
         part headspace : HeadspacePressureModel;

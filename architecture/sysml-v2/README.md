@@ -16,7 +16,7 @@ in CI. Architectural agreement is a design objective, not a verified claim.
 | RadiolysisSourceModel | `src/radiolysis_sources.cpp` and `src/hydrogen_kinetics.cpp` | Gross G-value and restricted net H2 accumulation model |
 | ThermalBalanceModel | `src/lumped_thermal.cpp` | Lumped constant-capacity energy balance |
 | ChemicalEquilibriumModel | `include/aqueous_engine.h`, `include/ideal_multiphase_equilibrium.h` | Original aqueous solver; independent ideal-dilute fluid solver with restricted single-phase charge balance and bounded neutral multiple-pure-solid extension |
-| SimulationController | `src/vessel_simulation.cpp`, `src/vessel_cli.cpp`, `src/radiolytic_hydrogen_vessel.cpp` | Restricted decay/heat/pressure and H2 kinetic coupling; no full chemistry |
+| SimulationController | `src/vessel_simulation.cpp`, `src/vessel_cli.cpp`, `src/radiolytic_hydrogen_vessel.cpp`, `src/adaptive_vessel_integration.cpp` | Adaptive rollback-enabled restricted decay/H2/heat/pressure integration; not full chemistry/DAE |
 | Nuclide-to-chemical-component bridge | `src/inventory_chemistry_bridge.cpp` | Per-isotope atoms to elemental moles, no phase allocation |
 | Neutral linear phase partition | `src/phase_partition.cpp` | Arbitrary fixed-volume liquid/gas phases; neutral dilute species only |
 | Restricted decay-to-neutral partition bridge | `src/decay_phase_partition.cpp` | Element totals from daughter nuclei; each element treated as one neutral pseudo-solute |
@@ -44,6 +44,13 @@ in CI. Architectural agreement is a design objective, not a verified claim.
 | RT-017 | Support a designated electroneutral fluid phase by inferring one free counterion component total. | `tests/ideal_charge_balance_tests.cpp` |
 | RT-018 | Compute a bounded, self-consistent approximate Davies ionic strength and charged-species activities in the generalized fluid model. | `tests/davies_multiphase_tests.cpp` |
 | RT-019 | Track radiolytic H2 gross generation, dissolved/headspace transfer and first-order modeled loss while conserving H2 molecular inventory plus loss. | `tests/hydrogen_kinetics_tests.cpp` |
+| RT-020 | Reject locally inaccurate time-integration steps and record attempts. | `tests/adaptive_vessel_tests.cpp` |
+| RT-021 | Preserve accepted state across rejected trials and failure. | `tests/adaptive_vessel_tests.cpp` |
+| RT-022 | Reach requested absolute end time with increasing accepted timestamps. | `tests/adaptive_vessel_tests.cpp` |
+| RT-023 | Audit total nucleus count per accepted interval. | `tests/adaptive_vessel_tests.cpp` |
+| RT-024 | Audit H2 inventory plus consumed sink per accepted interval. | `tests/adaptive_vessel_tests.cpp` |
+| RT-025 | Enforce accepted/rejected step budgets and minimum step. | `tests/adaptive_vessel_tests.cpp` |
+| RT-026 | Report interval energy, thermal response and pressure. | `tests/adaptive_vessel_tests.cpp` |
 
 ## Critical separation-of-concerns decisions
 
@@ -110,3 +117,17 @@ pressure using net headspace transfer. The consumption sink feeds an
 **unmodeled product pool** and no explicit atom or chemical enthalpy balance;
 the model is not closed thermochemical reactor simulation. See
 `docs/radiolytic-hydrogen-kinetics.md`.
+
+## SysML v1-style diagram views of SysML v2 concepts
+
+GitHub-renderable [diagram views](views/README.md) are organized by BDD,
+IBD, ACT, STM, SD, REQ, and PAR concerns. Textual SysML v2 files include
+connected `part` and `port` definitions, `action` and `state` definitions,
+and software requirement definitions. See `TimeIntegrationConnections.sysml`,
+`TimeIntegrationBehavior.sysml`, and `TimeIntegrationRequirements.sysml`.
+
+**Validation status:** no SysML v2 parser or Mermaid renderer runs in CI.
+These are engineering model views, *not* proven executable model links.
+Connections express software data exchanges, not pipes or liquid interfaces.
+See [requirement traceability](requirements-traceability.md) and the
+[adaptive time-integration scope](../../docs/adaptive-time-integration.md).
