@@ -42,6 +42,7 @@ in CI. Architectural agreement is a design objective, not a verified claim.
 | RT-015 | Solve simultaneous ideal-dilute fluid mass action and component conservation with arbitrary neutral species across liquids and gases. | `tests/ideal_multiphase_tests.cpp` |
 | RT-016 | Select up to eight initially absent pure solids by equilibrium saturation and complementarity. | `tests/ideal_multisolid_tests.cpp` |
 | RT-017 | Support a designated electroneutral fluid phase by inferring one free counterion component total. | `tests/ideal_charge_balance_tests.cpp` |
+| RT-018 | Compute a bounded, self-consistent approximate Davies ionic strength and charged-species activities in the generalized fluid model. | `tests/davies_multiphase_tests.cpp` |
 
 ## Critical separation-of-concerns decisions
 
@@ -92,3 +93,11 @@ fluid phase whose electroneutrality replaces one component mass balance;
 its free component total is inferred. This does not implement multi-phase
 electrochemical potentials, nonideal electrolytes or charged-solid selection.
 See `docs/general-ideal-charge-balance.md`.
+
+### Approximate nonideal extension
+
+An optional `davies_multiphase_equilibrium` adapter now iterates ionic
+strength and charged-aqueous-species activity corrections with the original
+molarity-based Davies function. It rejects unsupported temperature and high
+ionic strength; molality-correct Pitzer and multi-liquid electrochemical
+potentials remain unimplemented. See `docs/davies-multiphase-equilibrium.md`.

@@ -256,3 +256,17 @@ The extension is ideal-dilute only; it does **not** supply nonideal activity
 coefficients, electrochemical potentials across distinct liquid phases,
 redox chemistry, charged-species transport, or charged-solid equilibria.
 See `docs/general-ideal-charge-balance.md` for assumptions and tests.
+
+### Optional Davies-corrected generalized electrolyte equilibrium
+
+`davies_multiphase_equilibrium` supplies an additional, explicitly bounded
+activity correction for one charge-balanced aqueous phase. It combines the
+generalized stoichiometric equilibrium solver with the original approximate
+Davies coefficient function through a damped ionic-strength iteration.
+Tests compare salt activity coefficients, ideal versus nonideal association,
+and the earlier aqueous Davies implementation using aligned synthetic data.
+
+This is **not** molality-correct Pitzer thermodynamics, an interfacial
+electrochemical model, charged-solid equilibrium or a validated nuclide model.
+Ionic strength is restricted to 0.1 mol/L and temperature to 0–50 C.
+See `docs/davies-multiphase-equilibrium.md`.

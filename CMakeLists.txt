@@ -106,3 +106,15 @@ add_test(NAME restricted_ideal_multisolid_equilibrium COMMAND ideal_multisolid_t
 add_executable(ideal_charge_balance_tests tests/ideal_charge_balance_tests.cpp)
 target_link_libraries(ideal_charge_balance_tests PRIVATE ideal_multiphase_equilibrium)
 add_test(NAME ideal_electrolyte_charge_balance COMMAND ideal_charge_balance_tests)
+
+# Opt-in, approximately molarity-based Davies activity correction
+# for the single-phase charged generalized fluid equilibrium kernel.
+add_library(davies_multiphase_equilibrium src/davies_multiphase_equilibrium.cpp)
+target_include_directories(davies_multiphase_equilibrium PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(davies_multiphase_equilibrium PUBLIC
+    ideal_multiphase_equilibrium aqueous_engine)
+target_compile_options(davies_multiphase_equilibrium PRIVATE -Wall -Wextra -Wpedantic)
+add_executable(davies_multiphase_tests tests/davies_multiphase_tests.cpp)
+target_link_libraries(davies_multiphase_tests PRIVATE davies_multiphase_equilibrium)
+add_test(NAME restricted_davies_multiphase_coupling COMMAND davies_multiphase_tests)
