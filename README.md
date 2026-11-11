@@ -152,3 +152,65 @@ Only numerical success and mass-action/conservation consistency are established 
 - `speciation.cpp` — earlier ideal-only Phase 2 solver, retained for compatibility
 
 High-priority next steps remain: external PHREEQC comparisons using identical constants, broader solid-phase equilibrium and competing-phase support, diverse chemical test systems, validation reports, thermodynamic parameter provenance and rigorous standard-state conventions.
+
+## Radio-thermochemical multiphase foundation (experimental)
+
+The independent C++17 foundation provides a data model for arbitrary declared
+aqueous, immiscible-organic-liquid, gas and solid species/reactions, with
+structural/stoichiometric validation. First-order radionuclide decay supports
+daughter branching and cumulative event counts; emitted radiation energy
+is differentiated from prescribed phase-absorbed energy. Additional isolated
+modules calculate *gross* radiolytic G-value production and a 0D heat balance.
+
+**This is NOT yet a fully coupled multiphase simulation.** No phase equilibrium
+for multiple liquids or gases, isotope chemical partitioning, radiation transport,
+radiolytic recombination, or time-integrated chemistry has been implemented.
+A *restricted ideal-gas headspace pressure calculation* and an independent
+neutral-solute linear partition kernel are included, but they are not a coupled
+multiphase chemical equilibrium solver. The existing aqueous solver retains
+its 273.15–323.15 K guard and limited solid model.
+
+See [the SysML v2 architecture](architecture/sysml-v2/RadioThermochemicalArchitecture.sysml),
+[architecture-to-code mapping and requirements](architecture/sysml-v2/README.md),
+and `tests/foundation_tests.cpp`. This software is not verified for nuclear
+safety, regulatory use, or predictive engineering design.
+
+### Restricted closed-vessel demonstration
+
+`vessel_simulation` links the separate physics modules for a simple zero-
+dimensional example, including ideal-gas headspace pressure. Its gross
+radiolytic yield **does not** automatically become net headspace inventory.
+See `docs/closed-vessel-prototype.md` and `tests/vessel_tests.cpp`.
+
+### Nuclear inventory and linear phase partitioning
+
+`inventory_chemistry_bridge` converts per-nuclide atom inventories to
+chemical-element mole inventories with explicit daughter-element checks.
+`phase_partition` separately solves mass-conserving equilibrium distribution
+of arbitrary neutral dilute solutes among fixed-volume liquids and gases
+using independently supplied concentration ratios. Neither module provides
+radionuclide-specific chemical speciation, nonideal activities, or a fully
+coupled multiphase equilibrium solver.
+
+See `docs/multiphase-linear-partition.md` and corresponding CTest cases.
+
+### Data-driven radionuclide demonstration CLI
+
+The experimental `vessel_cli` executable accepts arbitrary declared nuclides,
+decay branches, prescribed energy-deposition fractions and radiolysis G-values
+from `examples/synthetic_vessel.txt`. Run with:
+
+    ./build/vessel_cli examples/synthetic_vessel.txt output.csv
+
+The example is intentionally synthetic. Pressure is computed from fixed headspace
+moles and temperature; gross radiolytic H2 formation is NOT net gas generation.
+See `docs/vessel-input-format.md` for units and restrictions.
+
+### Restricted decay-to-neutral-phase partition
+
+`decay_phase_partition` exercises an end-to-end conversion from arbitrary
+decay daughter atom inventories to elemental mole totals and fixed-ratio
+partitioning among aqueous/organic/gas phases. Each element is provisionally
+treated as a single neutral pseudo-solute: **this is not radionuclide
+speciation, redox chemistry, or full multiphase equilibrium**. See
+`docs/decay-phase-partition.md` and automated conservation tests.

@@ -39,3 +39,53 @@ add_executable(reference_tests tests/reference_tests.cpp)
 target_link_libraries(reference_tests PRIVATE aqueous_engine)
 add_test(NAME analytic_carbonate_reference COMMAND reference_tests)
 set_tests_properties(analytic_carbonate_reference PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+# Independent multiphysics foundation (does not change legacy aqueous solver).
+add_library(thermo_multiphysics_foundation
+    src/multiphase_system.cpp
+    src/decay_network.cpp
+    src/radiolysis_sources.cpp
+    src/lumped_thermal.cpp)
+target_include_directories(thermo_multiphysics_foundation PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_compile_options(thermo_multiphysics_foundation PRIVATE -Wall -Wextra -Wpedantic)
+add_executable(foundation_tests tests/foundation_tests.cpp)
+target_link_libraries(foundation_tests PRIVATE thermo_multiphysics_foundation)
+add_test(NAME radio_thermochemical_foundation COMMAND foundation_tests)
+
+add_library(vessel_simulation src/vessel_simulation.cpp)
+target_include_directories(vessel_simulation PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(vessel_simulation PUBLIC thermo_multiphysics_foundation)
+target_compile_options(vessel_simulation PRIVATE -Wall -Wextra -Wpedantic)
+add_executable(vessel_tests tests/vessel_tests.cpp)
+target_link_libraries(vessel_tests PRIVATE vessel_simulation)
+add_test(NAME closed_vessel_prototype COMMAND vessel_tests)
+
+add_library(inventory_chemistry_bridge src/inventory_chemistry_bridge.cpp)
+target_include_directories(inventory_chemistry_bridge PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(inventory_chemistry_bridge PUBLIC thermo_multiphysics_foundation)
+target_compile_options(inventory_chemistry_bridge PRIVATE -Wall -Wextra -Wpedantic)
+add_executable(inventory_bridge_tests tests/inventory_bridge_tests.cpp)
+target_link_libraries(inventory_bridge_tests PRIVATE inventory_chemistry_bridge)
+add_test(NAME radionuclide_element_inventory_bridge COMMAND inventory_bridge_tests)
+
+add_library(phase_partition src/phase_partition.cpp)
+target_include_directories(phase_partition PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_compile_options(phase_partition PRIVATE -Wall -Wextra -Wpedantic)
+add_executable(phase_partition_tests tests/phase_partition_tests.cpp)
+target_link_libraries(phase_partition_tests PRIVATE phase_partition)
+add_test(NAME multi_liquid_linear_partition COMMAND phase_partition_tests)
+
+add_executable(vessel_cli src/vessel_cli.cpp)
+target_link_libraries(vessel_cli PRIVATE vessel_simulation)
+add_test(NAME synthetic_vessel_cli
+    COMMAND vessel_cli ${CMAKE_CURRENT_SOURCE_DIR}/examples/synthetic_vessel.txt)
+
+add_library(decay_phase_partition src/decay_phase_partition.cpp)
+target_include_directories(decay_phase_partition PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(decay_phase_partition PUBLIC
+    inventory_chemistry_bridge phase_partition)
+target_compile_options(decay_phase_partition PRIVATE -Wall -Wextra -Wpedantic)
+add_executable(decay_phase_partition_tests tests/decay_phase_partition_tests.cpp)
+target_link_libraries(decay_phase_partition_tests PRIVATE decay_phase_partition)
+add_test(NAME nuclear_neutral_phase_partition COMMAND decay_phase_partition_tests)
