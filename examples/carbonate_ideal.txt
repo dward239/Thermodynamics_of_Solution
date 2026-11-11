@@ -1,0 +1,15 @@
+# Synthetic carbonate-water example (illustrative constants, NOT authoritative).
+# Closed carbon total 1 mM, sodium 1 mM; free H+ adjusted to electroneutrality.
+# T=298.15 K, c°=1 mol/L.
+temperature_k 298.15
+reference_temperature_k 298.15
+activity_model ideal
+component H+ 1 free
+component CO2* 0 0.001
+component Na+ 1 0.001
+# OH-: H2O -> H+ + OH-, logK=-14 => a_OH = K/a_H
+complex OH- -1 -14.0 55.8 1 H+ -1
+# HCO3-: CO2* -> H+ + HCO3-, pKa1~6.35 (synthetic representative)
+complex HCO3- -1 -6.35 7.7 2 CO2* 1 H+ -1
+# CO3--: CO2* -> 2H+ + CO3--, logK=-6.35-10.33
+complex CO3-- -2 -16.68 22.5 2 CO2* 1 H+ -2
