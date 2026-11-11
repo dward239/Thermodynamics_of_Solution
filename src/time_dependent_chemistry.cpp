@@ -42,6 +42,33 @@ std::set<std::string> checkModel(
             throw std::invalid_argument(
                 "Template components must be unique fixed-total placeholders with zero total");
     }
+    std::set<std::string> phaseIds;
+    for(const auto& phase:model.equilibriumTemplate.phases) {
+        if(phase.id.empty() || !phaseIds.insert(phase.id).second ||
+           !std::isfinite(phase.volumeM3) || phase.volumeM3<=0 ||
+           !std::isfinite(phase.standardConcentrationMolM3) ||
+           phase.standardConcentrationMolM3<=0)
+            throw std::invalid_argument("Invalid/duplicate fluid phase in chemistry template");
+        if(phase.kind!=IdealFluidPhaseKind::AqueousLiquid &&
+           phase.kind!=IdealFluidPhaseKind::OrganicLiquid &&
+           phase.kind!=IdealFluidPhaseKind::Gas)
+            throw std::invalid_argument("Unknown ideal fluid phase kind");
+    }
+    std::set<std::string> speciesNames;
+    for(const auto& species:model.equilibriumTemplate.species) {
+        if(species.id.empty() || !speciesNames.insert(species.id).second ||
+           !phaseIds.count(species.phaseId) ||
+           !std::isfinite(species.standardMuOverRT) ||
+           species.componentStoichiometry.empty())
+            throw std::invalid_argument("Invalid/duplicate fluid species in chemistry template");
+    }
+    std::set<std::string> solidNames=speciesNames;
+    for(const auto& solid:model.candidateSolids) {
+        if(solid.id.empty() || !solidNames.insert(solid.id).second ||
+           !std::isfinite(solid.standardMuOverRT) ||
+           solid.componentStoichiometry.empty())
+            throw std::invalid_argument("Invalid/duplicate pure solid candidate");
+    }
     for(const auto& nuclide:network.nuclides())
         if(!ids.count(nuclide.element))
             throw std::invalid_argument("Missing chemical component for nuclide element: "+nuclide.element);
@@ -125,13 +152,9 @@ TimeDependentChemistrySample project(
         }
     }
     // Populate absent components, species and solids with explicit zeros.
-    for(const auto& c:config.equilibriumTemplate.components) {
-        const auto name=c.id;
-        if(!out.fluid.calculatedComponentMol.count(name))
-            out.fluid.calculatedComponentMol[name]=0.0;
-        if(!out.fluid.componentResidualMol.count(name))
-            out.fluid.componentResidualMol[name]=0.0;
-    }
+    // For the optional solid equilibrium path the core solver does not
+    // populate calculatedComponentMol; compute it consistently below from
+    // aqueous/organic/gas species before adding the solid inventory.
     for(const auto& sp:config.equilibriumTemplate.species) {
         if(!out.fluid.speciesMoles.count(sp.id))
             out.fluid.speciesMoles[sp.id]=0.0;
@@ -141,18 +164,22 @@ TimeDependentChemistrySample project(
     // Independent audit from returned phase species + solid inventories.
     // Compare each conserved component with its background + nuclide input.
     for(const auto& name:ids) {
-        double calculated=0.0;
+        double fluidAmount=0.0;
         for(const auto& sp:config.equilibriumTemplate.species) {
             const auto it=sp.componentStoichiometry.find(name);
             if(it!=sp.componentStoichiometry.end())
-                calculated+=it->second*out.fluid.speciesMoles.at(sp.id);
+                fluidAmount+=it->second*out.fluid.speciesMoles.at(sp.id);
         }
+        double solidAmount=0.0;
         for(const auto& solid:config.candidateSolids) {
             const auto it=solid.componentStoichiometry.find(name);
             if(it!=solid.componentStoichiometry.end())
-                calculated+=it->second*out.solidMoles.at(solid.id);
+                solidAmount+=it->second*out.solidMoles.at(solid.id);
         }
+        const double calculated=fluidAmount+solidAmount;
+        out.fluid.calculatedComponentMol[name]=fluidAmount;
         const double total=out.inputComponentMol.at(name);
+        out.fluid.componentResidualMol[name]=calculated-total;
         const double scale=config.conservationAbsoluteToleranceMol+
                            config.conservationRelativeTolerance*total;
         const double residual=std::abs(calculated-total)/scale;
