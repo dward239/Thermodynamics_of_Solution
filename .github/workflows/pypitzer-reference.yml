@@ -1,0 +1,39 @@
+name: NaCl PyPitzer Reference (optional)
+
+on:
+  pull_request:
+    paths:
+      - 'tools/compare_nacl_pypitzer.py'
+      - 'docs/pypitzer-nacl-benchmark.md'
+      - '.github/workflows/pypitzer-reference.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  nacl-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned research reference (PyPitzer 2.0 GitHub source)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "git+https://github.com/yiping-git/pypitzer.git@5a774ae52e41914a7237fee55ef0bbb1e7c76eff"
+      - name: Build repository C++ aqueous solver
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel
+      - name: Compare 25 C NaCl activity coefficients
+        run: |
+          python tools/compare_nacl_pypitzer.py --aqueous-cli build/aqueous_cli --output nacl-pypitzer-comparison.csv
+      - name: Upload comparison data
+        uses: actions/upload-artifact@v4
+        with:
+          name: nacl-pypitzer-reference
+          path: nacl-pypitzer-comparison.csv
+          if-no-files-found: error
