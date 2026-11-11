@@ -105,3 +105,4 @@ Result solveSingleIdealSolid(const Model& model,const Options& options) {
     midpointState.saturationIndex[solid.name]=si;
     return midpointState;
 }
+} // namespace aqueous
