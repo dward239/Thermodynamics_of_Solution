@@ -97,3 +97,7 @@ target_compile_options(ideal_multiphase_equilibrium PRIVATE -Wall -Wextra -Wpeda
 add_executable(ideal_multiphase_tests tests/ideal_multiphase_tests.cpp)
 target_link_libraries(ideal_multiphase_tests PRIVATE ideal_multiphase_equilibrium)
 add_test(NAME ideal_multiphase_mass_action COMMAND ideal_multiphase_tests)
+
+add_executable(ideal_multisolid_tests tests/ideal_multisolid_tests.cpp)
+target_link_libraries(ideal_multisolid_tests PRIVATE ideal_multiphase_equilibrium)
+add_test(NAME restricted_ideal_multisolid_equilibrium COMMAND ideal_multisolid_tests)
