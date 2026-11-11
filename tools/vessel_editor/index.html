@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vessel Input Editor</title>
+  <link rel="stylesheet" href="editor.css">
+  <script defer src="model.js"></script>
+  <script defer src="editor.js"></script>
+</head>
+<body>
+  <header class="masthead">
+    <span class="mark" aria-hidden="true">V</span>
+    <span>Thermodynamics of Solution</span>
+  </header>
+  <main>
+    <div class="intro">
+      <div>
+        <h1>Vessel input editor</h1>
+        <p>Configure a decay and radiolysis case for <code>vessel_cli</code>.</p>
+      </div>
+      <div class="actions">
+        <button id="new" type="button">New case</button>
+        <button id="example" type="button">Load example</button>
+        <button id="open" type="button">Import .txt</button>
+        <input id="file" type="file" accept=".txt,text/plain" hidden>
+      </div>
+    </div>
+    <p id="notice" role="status" hidden></p>
+    <div class="layout">
+      <section class="workspace" aria-label="Case inputs">
+        <nav id="sections" aria-label="Input sections"></nav>
+        <div id="fields"></div>
+      </section>
+      <aside aria-label="Case status and export">
+        <section class="panel validation">
+          <div class="panel-title">
+            <h2>Validation</h2>
+            <span id="status" class="status" role="status"></span>
+          </div>
+          <p id="duration"></p>
+          <ul id="issues"></ul>
+        </section>
+        <section class="panel output">
+          <div class="panel-title"><h2>Input file</h2><code>.txt</code></div>
+          <pre id="preview" tabindex="0" aria-label="Generated vessel input"></pre>
+          <label for="filename">File name</label>
+          <div class="download">
+            <input id="filename" type="text" value="vessel_model.txt" spellcheck="false">
+            <button id="export" type="button" class="primary">Download</button>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>
