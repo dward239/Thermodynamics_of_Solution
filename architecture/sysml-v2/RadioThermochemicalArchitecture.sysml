@@ -55,6 +55,10 @@ package RadioThermochemicalArchitecture {
         attribute freeCounterionTotalMol : Real;
         attribute chargeResidualMol : Real;
     }
+    part def DaviesActivityCoupling {
+        attribute ionicStrengthMolL : Real;
+        attribute outerConsistencyResidual : Real;
+    }
     part def SimulationController {
         part chemicalSystem : ChemicalSystemModel;
         part inventory : NuclideInventoryModel;
@@ -66,6 +70,7 @@ package RadioThermochemicalArchitecture {
         part idealFluid : GeneralIdealFluidEquilibriumModel;
         part solidSelection : PureSolidPhaseSelector;
         part chargeBalance : SinglePhaseChargeBalance;
+        part daviesCoupling : DaviesActivityCoupling;
         part inventoryBridge : NuclearChemicalInventoryBridge;
         part partition : DilutePhasePartitionModel;
         part headspace : HeadspacePressureModel;
