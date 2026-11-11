@@ -70,6 +70,11 @@ package RadioThermochemicalArchitecture {
         attribute currentTimeSeconds : Real;
         attribute localErrorEstimate : Real;
     }
+    part def AcceptedChemicalProjectionModel {
+        attribute activeComponentCount : Integer;
+        attribute activeSolidCount : Integer;
+        attribute maximumScaledComponentClosure : Real;
+    }
     part def SimulationController {
         part chemicalSystem : ChemicalSystemModel;
         part inventory : NuclideInventoryModel;
@@ -84,6 +89,7 @@ package RadioThermochemicalArchitecture {
         part daviesCoupling : DaviesActivityCoupling;
         part hydrogenKinetics : RadiolyticHydrogenKinetics;
         part adaptiveIntegrator : AdaptiveTimeIntegratorModel;
+        part acceptedChemistry : AcceptedChemicalProjectionModel;
         part inventoryBridge : NuclearChemicalInventoryBridge;
         part partition : DilutePhasePartitionModel;
         part headspace : HeadspacePressureModel;

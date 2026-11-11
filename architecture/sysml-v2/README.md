@@ -16,7 +16,7 @@ in CI. Architectural agreement is a design objective, not a verified claim.
 | RadiolysisSourceModel | `src/radiolysis_sources.cpp` and `src/hydrogen_kinetics.cpp` | Gross G-value and restricted net H2 accumulation model |
 | ThermalBalanceModel | `src/lumped_thermal.cpp` | Lumped constant-capacity energy balance |
 | ChemicalEquilibriumModel | `include/aqueous_engine.h`, `include/ideal_multiphase_equilibrium.h` | Original aqueous solver; independent ideal-dilute fluid solver with restricted single-phase charge balance and bounded neutral multiple-pure-solid extension |
-| SimulationController | `src/vessel_simulation.cpp`, `src/vessel_cli.cpp`, `src/radiolytic_hydrogen_vessel.cpp`, `src/adaptive_vessel_integration.cpp` | Adaptive rollback-enabled restricted decay/H2/heat/pressure integration; not full chemistry/DAE |
+| SimulationController | `src/vessel_simulation.cpp`, `src/vessel_cli.cpp`, `src/radiolytic_hydrogen_vessel.cpp`, `src/adaptive_vessel_integration.cpp`, `src/time_dependent_chemistry.cpp` | Adaptive decay/H2/heat/pressure integration with an optional acceptance-time one-way neutral chemical-equilibrium projection; no thermochemical DAE |
 | Nuclide-to-chemical-component bridge | `src/inventory_chemistry_bridge.cpp` | Per-isotope atoms to elemental moles, no phase allocation |
 | Neutral linear phase partition | `src/phase_partition.cpp` | Arbitrary fixed-volume liquid/gas phases; neutral dilute species only |
 | Restricted decay-to-neutral partition bridge | `src/decay_phase_partition.cpp` | Element totals from daughter nuclei; each element treated as one neutral pseudo-solute |
@@ -51,6 +51,11 @@ in CI. Architectural agreement is a design objective, not a verified claim.
 | RT-024 | Audit H2 inventory plus consumed sink per accepted interval. | `tests/adaptive_vessel_tests.cpp` |
 | RT-025 | Enforce accepted/rejected step budgets and minimum step. | `tests/adaptive_vessel_tests.cpp` |
 | RT-026 | Report interval energy, thermal response and pressure. | `tests/adaptive_vessel_tests.cpp` |
+| RT-027 | Map accepted nuclide atom inventories and constant background totals to chemical components. | `tests/time_dependent_chemistry_tests.cpp` |
+| RT-028 | Include newly appearing daughter chemical species without artificial initial concentrations. | `tests/time_dependent_chemistry_tests.cpp` |
+| RT-029 | Require valid equilibrium projection before accepting a candidate; never project rejected numerical trials. | `tests/adaptive_vessel_tests.cpp`, `tests/time_dependent_chemistry_tests.cpp` |
+| RT-030 | Audit conserved components independently across fluid species and precipitated solids. | `tests/time_dependent_chemistry_tests.cpp` |
+| RT-031 | Reject unsupported charged, invalid-phase, duplicate and unrepresentable chemical configurations. | `tests/time_dependent_chemistry_tests.cpp` |
 
 ## Critical separation-of-concerns decisions
 
@@ -131,3 +136,16 @@ These are engineering model views, *not* proven executable model links.
 Connections express software data exchanges, not pipes or liquid interfaces.
 See [requirement traceability](requirements-traceability.md) and the
 [adaptive time-integration scope](../../docs/adaptive-time-integration.md).
+
+
+### Accepted-time chemistry extension
+
+The `time_dependent_chemistry` adapter uses the adaptive controller's
+accepted-sample observer to compute isotope-derived chemical component
+inventories and ideal-dilute neutral multiphase/optional pure-solid equilibrium
+**before committing each accepted candidate**. Failure aborts the run;
+rejected adaptive trials never trigger chemistry. It does not affect the
+time-step error estimator or the nuclear, gas, or energy differential state.
+A new [chemistry coupling diagram](views/09-chemistry-time-coupling.md)
+and [SysML v2 connection/behavior model](ChemistryTimeCoupling.sysml)
+show the optional call path. This remains **one-way, not DAE coupling**.

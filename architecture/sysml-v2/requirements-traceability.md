@@ -12,6 +12,11 @@ chemical equilibrium and a coupled thermochemical DAE remain unimplemented.
 | RT-024 | Audit gross H2, liquid H2, gas H2, and explicit consumed pool | `HydrogenKineticsStep` + interval closure check | `testIntegratedRadiolysisAndHeating` |
 | RT-025 | Bound accepted/rejected attempts and minimum dt | `AdaptiveVesselOptions` | `testGuardsAndFailureDoesNotMutate` |
 | RT-026 | Record interval radiation energy, temperature and gas pressure | `AdaptiveVesselSample` | `testIntegratedRadiolysisAndHeating` |
+| RT-027 | Convert accepted nuclide inventories to elemental moles and add background inventories | `TimeDependentChemistryModel` and `elementalMolesFromNuclides` | `phaseAndDaughter` |
+| RT-028 | Suppress absent daughter species/solids without injecting positive seed concentrations | `src/time_dependent_chemistry.cpp::project` | `phaseAndDaughter`, `allZero`, `dynamicSolidAppearance` |
+| RT-029 | Execute chemistry only for accepted candidates before commit; abort on chemical failure | `AdaptiveVesselSample` acceptance callback | `testAcceptedObserverAndFailure`, `abortWhenNewDaughterHasNoSpecies` |
+| RT-030 | Independently reconstruct declared conserved components across fluids and solids | `TimeDependentChemistrySample.maximumScaledComponentClosure` | `dynamicSolidAppearance` |
+| RT-031 | Reject charged and invalid/unsupported model templates | `src/time_dependent_chemistry.cpp::checkModel` | `invalidModels` |
 
 ## Numerical acceptance and conservation
 
@@ -35,3 +40,15 @@ not interpreted by an automated verification engine yet.
 **Unfulfilled:** RT-007 general nonideal multiphase phase equilibrium;
 RT-008 general equilibrium-kinetics-energy DAE coupling (only a restricted
 subset is now implemented); RT-009 physical and experimental validation.
+
+## Restricted chemical projection (not DAE)
+
+RT-027 through RT-031 are implemented only for neutral ideal-dilute
+fluid chemistry with <=8 initially absent pure solids. The accepted-sample
+observer is called **before commit**, but projected species do not affect
+the adaptive local-error criterion or any vessel derivatives. The input
+nuclear/thermal/radiolysis state is one-way; chemistry is re-equilibrated
+as an algebraic diagnostic. At each accepted point, the chemical component
+balance is reconstructed from species amounts plus solid amounts.
+
+See [model limits](../../docs/time-dependent-chemical-projection.md).

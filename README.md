@@ -296,8 +296,28 @@ to the existing restricted decay, radiolytic-H2, thermal and headspace model.
 It evaluates a full step and two half steps from the same accepted state,
 and commits only the accepted two-half-step trajectory.
 
-**This is not yet a unified equilibrium/kinetics DAE integrator.** The
-general aqueous and multiphase equilibrium kernels are not called by this
-controller, and radiochemical products and heat of reaction remain unmodeled.
+**This is not yet a unified equilibrium/kinetics DAE integrator.**
+The base vessel controller does not compute chemical equilibrium internally.
+An optional accepted-state callback now enables one-way neutral-species
+projection, but chemistry feedback and reaction enthalpy remain unmodeled.
 See [time-integration scope](docs/adaptive-time-integration.md) and the
 [SysML v1-style diagram views](architecture/sysml-v2/views/README.md).
+
+
+### Accepted-step radionuclide-to-chemical equilibrium projection
+
+The experimental `time_dependent_chemistry` wrapper now re-equilibrates
+**neutral ideal-dilute fluid and optional pure-solid species** when accepted
+radioactive-vessel states are produced. Nuclide atoms are converted into
+elemental moles, independent non-radioactive background inventories are added,
+and zero-inventory daughter species are suppressed until they appear.
+Every chemical projection independently audits fluid+solid component
+conservation; failure aborts the run **before** the candidate is committed.
+
+This is **one-way operator splitting**, not the intended fully coupled
+multiphase thermochemical DAE. Chemistry does not feed back to vessel
+thermal/radiolysis/gas/pressure dynamics, and user-specified dimensionless
+standard chemical potentials remain constant even when vessel temperature
+changes. Charged/nonideal chemistry is not supported by this wrapper.
+See [coupling limitations](docs/time-dependent-chemical-projection.md) and
+[chemical connection, activity and state views](architecture/sysml-v2/views/09-chemistry-time-coupling.md).
