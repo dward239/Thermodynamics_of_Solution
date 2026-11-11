@@ -1,30 +1,31 @@
-#include <iostream>
-#include "species.h"
 #include "pitzer.h"
 #include "solver.h"
-#include "speciation.h"
-int main() {
-   // Load species from database file
-   std::vector<AqueousSpecies> species = loadSpecies("database.txt");
-   // Mark primary species manually
-   for (auto& sp : species) {
-       if (sp.name == "UO2++" || sp.name == "F-" || sp.name == "H+") {
-           sp.isPrimary = true;
-       }
-   }
-   // Define solution and total input
-   Solution solution;
-   TotalInput input;
-   input.totals["U"] = 1e-3;  // 1 mM total uranium
-   input.totals["F"] = 2e-3;  // 2 mM total fluoride
-   input.totals["H"] = 0.0;   // H is not mass-balanced; only used for charge
-   // Initial guesses for free species
-   solution.concentrations["UO2++"] = 5e-4;
-   solution.concentrations["F-"] = 1e-3;
-   solution.concentrations["H+"] = 1e-3;  // pH ≈ 3
-   // Calculate activity coefficients
-   calculateActivityCoefficients(species, solution);
-   // Solve for speciation and pH
-   solveSpeciation(species, solution, input);
-   return 0;
+#include "species.h"
+#include <exception>
+#include <iostream>
+#include <map>
+
+int main(int argc, char** argv) {
+    try {
+        if (argc < 2) {
+            std::cout << "Thermodynamics of Solution: experimental numerical components\n"
+                      << "Usage: thermo <species-database> [pitzer-parameters]\n"
+                      << "An equilibrium/speciation solver is not yet implemented.\n";
+            return 0;
+        }
+        auto species = loadSpecies(argv[1]);
+        if (species.empty()) {
+            std::cerr << "No species loaded. Supply a populated database.\n";
+            return 1;
+        }
+        std::cout << "Loaded " << species.size() << " species.\n";
+        if (argc >= 3) {
+            auto parameters = loadPitzerParameters(argv[2]);
+            std::cout << "Loaded " << parameters.size() << " interaction pairs.\n";
+        }
+        return 0;
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << '\n';
+        return 1;
+    }
 }

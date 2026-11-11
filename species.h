@@ -7,8 +7,8 @@
 // Represents an aqueous complex or ion (e.g., UO2F2, H+, C2O4--, etc.)
 struct AqueousSpecies {
    std::string name;                          // Species name
-   double charge;                             // Electrical charge
-   double logK;                               // log10 equilibrium constant
+   double charge = 0.0;                             // Electrical charge
+   double logK = 0.0;                               // log10 equilibrium constant
    std::map<std::string, int> stoichiometry;  // {component -> coefficient}
    double activityCoefficient = 1.0;          // Calculated later via Pitzer
    double concentration = 0.0;                // mol/L (can be initialized later)
@@ -17,7 +17,7 @@ struct AqueousSpecies {
 // Represents a solid phase with a solubility product
 struct SolidPhase {
    std::string name;                          // Solid name (e.g., UO2(C2O4)·2H2O)
-   double logKsp;                             // log10 solubility product
+   double logKsp = 0.0;                             // log10 solubility product
    std::map<std::string, int> stoichiometry;  // {ion -> coefficient}
 };
 // Represents the solution system: composition, state variables, etc.

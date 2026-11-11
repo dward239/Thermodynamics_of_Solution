@@ -1,15 +1,15 @@
-#ifndef SPECIATION_H
-#define SPECIATION_H
+#pragma once
 #include "species.h"
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
-// Holds total input amounts for conserved elements
+
 struct TotalInput {
-   std::map<std::string, double> totals;  // e.g., {"U": 1e-3, "F": 2e-3}
+    std::map<std::string, double> totals;
 };
-// Main speciation solver interface
+
+// Placeholder for future validated mass-action / conservation solver.
+// Throws until an explicit set of mass-action reactions and independent
+// balance equations is supplied.
 void solveSpeciation(std::vector<AqueousSpecies>& species,
-                    Solution& solution,
-                    const TotalInput& input);
-#endif
+    Solution& solution, const TotalInput& input);
