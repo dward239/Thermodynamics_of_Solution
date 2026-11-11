@@ -4,6 +4,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <set>
+#include <utility>
 
 namespace {
 std::ifstream openInput(const std::string& path) {
