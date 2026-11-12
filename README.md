@@ -308,6 +308,10 @@ and commits only the accepted two-half-step trajectory.
 The base vessel controller does not compute chemical equilibrium internally.
 An optional accepted-state callback now enables one-way neutral-species
 projection, but chemistry feedback and reaction enthalpy remain unmodeled.
+Run the [synthetic adaptive chemistry example](examples/adaptive_vessel_chemistry.txt)
+with `vessel_cli` to export a time history of H₂, temperature, pressure,
+nuclides, and chemical inventories. See the [input format](docs/vessel-input-format.md).
+
 See [time-integration scope](docs/adaptive-time-integration.md) and the
 [SysML v1-style diagram views](architecture/sysml-v2/views/README.md).
 

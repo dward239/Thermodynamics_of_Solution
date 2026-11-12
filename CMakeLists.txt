@@ -76,11 +76,6 @@ add_executable(phase_partition_tests tests/phase_partition_tests.cpp)
 target_link_libraries(phase_partition_tests PRIVATE phase_partition)
 add_test(NAME multi_liquid_linear_partition COMMAND phase_partition_tests)
 
-add_executable(vessel_cli src/vessel_cli.cpp)
-target_link_libraries(vessel_cli PRIVATE vessel_simulation)
-add_test(NAME synthetic_vessel_cli
-    COMMAND vessel_cli ${CMAKE_CURRENT_SOURCE_DIR}/examples/synthetic_vessel.txt)
-
 add_library(decay_phase_partition src/decay_phase_partition.cpp)
 target_include_directories(decay_phase_partition PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(decay_phase_partition PUBLIC
@@ -153,3 +148,15 @@ add_executable(time_dependent_chemistry_tests tests/time_dependent_chemistry_tes
 target_link_libraries(time_dependent_chemistry_tests PRIVATE time_dependent_chemistry)
 add_test(NAME isotope_to_time_dependent_equilibrium
     COMMAND time_dependent_chemistry_tests)
+
+add_executable(vessel_cli src/vessel_cli.cpp)
+target_link_libraries(vessel_cli PRIVATE time_dependent_chemistry)
+target_compile_options(vessel_cli PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME synthetic_vessel_cli
+    COMMAND vessel_cli ${CMAKE_CURRENT_SOURCE_DIR}/examples/synthetic_vessel.txt)
+add_test(NAME adaptive_vessel_cli
+    COMMAND ${CMAKE_COMMAND}
+        -DCLI=$<TARGET_FILE:vessel_cli>
+        -DCASE=${CMAKE_CURRENT_SOURCE_DIR}/examples/adaptive_vessel_chemistry.txt
+        -DTEST_DIR=${CMAKE_CURRENT_BINARY_DIR}
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/adaptive_vessel_cli_test.cmake)
