@@ -49,8 +49,8 @@ rejected-step rollback and failure budgets.
   physical-model uncertainty or nuclear data accuracy.
 - General purpose SUNDIALS/IDA coupling and independently validated
   data are future milestones.
-- No end-user adaptive input-format/CLI parser yet; the interface
-  is C++17, exercised by CTest.
+- The vessel CLI accepts adaptive input files and optional neutral chemistry
+  projection. See [vessel input format](vessel-input-format.md).
 
 **Scientific status:** mathematical and conservation verification of
 restricted synthetic cases, not qualified for safety, regulatory,

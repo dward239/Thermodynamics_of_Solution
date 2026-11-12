@@ -1,0 +1,29 @@
+# Synthetic numerical example. X and Y are fictitious.
+nuclide X-parent X 10 1e-20
+nuclide Y-daughter Y 0 0
+daughter X-parent Y-daughter 1
+deposit X-parent water 0.5
+atoms X-parent 6.02214076e23
+gvalue water H2 0.5
+thermal 2 25 0 298.15 0.5
+headspace 0.01 0.1 298.15
+
+# end time, initial/min/max step (s), relative tolerance
+adaptive 10 2 1e-5 10 1e-4
+# source phase, initial dissolved/gas H2 (mol), transfer/consumption (1/s),
+# equilibrium dissolved-to-gas mole ratio, kinetic substeps
+hydrogen water 0 0 0.1 0 0.2 16
+
+chem_component X 0
+chem_component Y 0
+chem_phase water aqueous 1 1
+chem_phase solvent organic 1 1
+chem_species X(aq) water 0 X 1
+chem_species X(org) solvent -0.6931471805599453 X 1
+chem_species Y(aq) water 0 Y 1
+chem_solid XY(s) -4.605170185988092 X 1 Y 1
+chem_temperature 298.15 273.15 323.15
+chem_enthalpy X(aq) 0
+chem_enthalpy X(org) 18000
+chem_enthalpy Y(aq) 0
+chem_enthalpy XY(s) -30000

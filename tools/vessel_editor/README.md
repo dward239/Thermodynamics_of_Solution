@@ -11,7 +11,7 @@ Download the finished case and pass it to `vessel_cli`, for example:
 
 On Windows with a Visual Studio build, the executable is commonly
 `build\Debug\vessel_cli.exe`. The GUI edits the fixed-step vessel CLI format.
-The separate adaptive chemistry C++ API has its own model and options.
+Adaptive cases can be prepared using the [vessel input reference](../../docs/vessel-input-format.md).
 
 Files are read and generated in the browser. Case data stays in the open
 page until downloaded. Export groups records by keyword and moves imported
