@@ -160,3 +160,8 @@ add_test(NAME adaptive_vessel_cli
         -DCASE=${CMAKE_CURRENT_SOURCE_DIR}/examples/adaptive_vessel_chemistry.txt
         -DTEST_DIR=${CMAKE_CURRENT_BINARY_DIR}
         -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/adaptive_vessel_cli_test.cmake)
+
+# Independent two-stage Bateman decay and three-phase chemical projection benchmark.
+add_executable(bateman_chemistry_benchmark_tests tests/bateman_chemistry_benchmark_tests.cpp)
+target_link_libraries(bateman_chemistry_benchmark_tests PRIVATE time_dependent_chemistry)
+add_test(NAME analytic_bateman_three_phase_projection COMMAND bateman_chemistry_benchmark_tests)
